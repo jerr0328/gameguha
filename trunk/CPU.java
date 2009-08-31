@@ -16,12 +16,22 @@ public static void execute(int opcode)
 	PC++;
 	switch(opcode)
 	{
+		case 0x01: //LD BC,nn
+			BREG = MEM[PC++];
+			CREG = MEM[PC++];
+		break;
+		
 		case 0x02: //LD (BC),A
 			MEM[ (BREG << 8) | CREG ] = AREG;
 		break;
 		
 		case 0x06: //LD B,n
 			BREG = MEM[PC++];
+		break;
+		
+		case 0x08: //LD (nn),SP
+			MEM[ ( MEM[PC] << 8 ) | MEM[PC+1] ] = SP;
+			PC += 2;
 		break;
 		
 		case 0x0A: //LD A,(BC)
@@ -31,6 +41,10 @@ public static void execute(int opcode)
 		case 0x0E: //LD C,n
 			CREG=MEM[PC++];
 		break;
+		
+		case 0x11: //LD DE,nn
+			DREG = MEM[PC++];
+			EREG = MEM[PC++];
 		
 		case 0x12: //LD (DE),A
 			MEM[ (DREG << 8) | EREG ] = AREG;
@@ -52,8 +66,74 @@ public static void execute(int opcode)
 			HREG=MEM[PC++];
 		break;
 	
+		case 0x21: //LD HL,nn
+			HREG = MEM[PC++];
+			LREG = MEM[PC++];
+		break;
+		
+		case 0x22: //LDI (HL),A
+			MEM[ ( HREG << 8 ) | LREG ] = AREG;
+			if (LREG == 0xFF)
+			{
+				if(HREG == 0xFF)
+					HREG = 0;
+				else 
+					HREG++;
+				LREG = 0;
+			}
+			else
+				LREG++;
+		break;	
+		
+		case 0x2A: //LDI A,(HL)
+			AREG = MEM [ (HREG << 8 ) | LREG ];
+			if (LREG == 0xFF)
+			{
+				if(HREG == 0xFF)
+					HREG = 0;
+				else 
+					HREG++;
+				LREG = 0;
+			}
+			else
+				LREG++;
+		break;
+			
 		case 0x2E: //LD L,n
 			LREG=MEM[PC++];
+		break;
+		
+		case 0x31: //LD SP,nn
+			SP = ( ( MEM[PC] << 8 ) | MEM[PC+1] )
+			PC += 2;
+		break;
+		
+		case 0x32: //LDD (HL),A
+			MEM[ (HREG << 8 ) | LREG ] = AREG;
+			if (LREG == 0)
+			{
+				if (HREG == 0)
+					HREG = 0xFF;
+				else
+					HREG--;
+				LREG=0xFF;
+			}
+			else
+				LREG--;
+		break;
+			
+		case 0x3A: //LDD, A,(HL)
+			AREG = MEM[ (HREG << 8 ) | LREG ];
+			if (LREG == 0)
+			{
+				if (HREG == 0)
+					HREG = 0xFF;
+				else
+					HREG--;
+				LREG=0xFF;
+			}
+			else
+				LREG--;
 		break;
 	
 		case 0x36: //LD (HL),n
@@ -306,11 +386,68 @@ public static void execute(int opcode)
 		case 0x7F: //LD A,A
 		break;
 		
+		case 0xC5: //PUSH BC
+			MEM[--SP] = CREG;
+			MEM[--SP] = BREG;
+		break;
+		
+		case 0xD5: //PUSH DE
+			MEM[--SP] = EREG;
+			MEM[--SP] = DREG;
+		break;
+		
+		case 0xE2: //LD (C),A **WRITE TO IO C**
+			MEM[ 0xFF00 + CREG ] = AREG;
+		break;
+		
+		case 0xE5: // PUSH HL
+			MEM[--SP] = LREG;
+			MEM[--SP] = HREG;
+		break;
+				
+		case 0xE0: //LDH (n),A **WRITE TO ADDRESS N**
+			MEM[ 0xFF00 + MEM[PC++] ] = AREG;
+		break;
+		
 		case 0xEA: //LD (nn),A
 			MEM[ MEM[PC] | (MEM[PC+1] << 8) ] = AREG;
 			PC += 2;
 		break;
 		
+		case 0xF0: //LDH (n),A **READ FROM ADDRESS N**
+			AREG = MEM[ 0xFF00 + MEM[PC++] ];
+		break;
+		
+		case 0xF2: //LD A,(C) **READ FROM IO C**
+			AREG = MEM[ 0xFF00 + CREG ];
+		break;
+		
+		case 0xF5: // PUSH AF
+			MEM[--SP] = FREG;
+			MEM[--SP] = AREG;
+		break;
+		
+		case 0xF8: //LDHL SP,n
+			FREG = 0;
+			int index = SP+MEM[PC];
+			if (index > 0xFFFF)
+			{
+				index &= 0xFFFF;
+				FREG ^= 0x10;
+			}
+			if ((SP & 0x0FFF) + MEM[PC] > 0xFFF)
+				FREG ^= 0x20;
+				
+			int val = MEM[index];
+			HREG = (val & 0xF0);
+			LREG = (val & 0x0F);
+			PC++;
+		break;
+		
+		case 0xF9: //LD SP,HL
+			SP = ( (HREG << 8 ) | LREG );
+		break;
+		 
 		case 0xFA: //LD A,(nn)
 			AREG = MEM[ MEM[PC] | (MEM[PC+1] << 8) ];
 			PC += 2;
