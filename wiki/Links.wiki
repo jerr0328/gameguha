@@ -8,4 +8,5 @@ Add any links that are helpful to this list
 = Links =
 
   * http://nocash.emubase.de/pandocs.htm
+  * http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
   * ...
