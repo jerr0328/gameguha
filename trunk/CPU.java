@@ -10,6 +10,9 @@ public static int SP=0xFFFE; // GameBoy inits to 0xFFFE
 public static int PC=0x0100; // will be 0x0100 by ROM
 public static int[] MEM = new int[0x10000]; // 0xFFFF+1
 
+public static int val = 0;
+public static int index = 0;
+
 
 public static void execute(int opcode)
 {
@@ -386,16 +389,188 @@ public static void execute(int opcode)
 		case 0x7F: //LD A,A
 		break;
 		
+		case 0x80: //ADD A,B
+			FREG = 0;
+			AREG += BREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (BREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x81: //ADD A,C
+			FREG = 0;
+			AREG += CREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (CREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x82: //ADD A,D
+			FREG = 0;
+			AREG += DREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (DREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x83: //ADD A,E
+			FREG = 0;
+			AREG += EREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (EREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x84: //ADD A,H
+			FREG = 0;
+			AREG += HREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (HREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x85: //ADD A,L
+			FREG = 0;
+			AREG += LREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			if ((AREG & 0x0F) + (LREG & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x86: // ADD A,(HL)
+			FREG = 0;
+			val = MEM[(HREG << 8) | LREG];
+			AREG += val;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+			
+			if ((AREG & 0x0F) + (val & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0x87: //ADD A,A
+			FREG = 0;
+			AREG += AREG;
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+				
+			val = AREG & 0x0F;
+			if ((val + val) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+		break;
+		
+		case 0xC1: // POP C1
+			BREG = MEM[SP++];
+			CREG = MEM[SP++];
+		break;
+		
 		case 0xC5: //PUSH BC
 			MEM[--SP] = CREG;
 			MEM[--SP] = BREG;
 		break;
 		
+		case 0x86: // ADD A,(HL)
+			FREG = 0;
+			AREG += MEM[PC];
+			
+			if ((AREG & 0xFF) == 0)
+				FREG ^= 0x80;
+			
+			if ((AREG & 0x0F) + (MEM[PC] & 0x0F) > 0x0F)
+				FREG ^= 0x20;
+			
+			if (AREG > 0xFF)
+			{
+				AREG &= 0xFF;
+				FREG ^= 0x10;
+			}
+			
+			PC++;
+		break;
+		
+		case 0xD1: // POP DE
+			DREG = MEM[SP++];
+			EREG = MEM[SP++];
+		break;
+			
 		case 0xD5: //PUSH DE
 			MEM[--SP] = EREG;
 			MEM[--SP] = DREG;
 		break;
 		
+		case 0xE1: // POP HL
+			HREG = MEM[SP++];
+			LREG = MEM[SP++];
+		break;
+			
 		case 0xE2: //LD (C),A **WRITE TO IO C**
 			MEM[ 0xFF00 + CREG ] = AREG;
 		break;
@@ -418,6 +593,11 @@ public static void execute(int opcode)
 			AREG = MEM[ 0xFF00 + MEM[PC++] ];
 		break;
 		
+		case 0xF1: // POP AF
+			AREG = MEM[SP++];
+			FREG = MEM[SP++];
+		break;
+		
 		case 0xF2: //LD A,(C) **READ FROM IO C**
 			AREG = MEM[ 0xFF00 + CREG ];
 		break;
@@ -429,16 +609,18 @@ public static void execute(int opcode)
 		
 		case 0xF8: //LDHL SP,n
 			FREG = 0;
-			int index = SP+MEM[PC];
+			
+			index = SP+MEM[PC];
 			if (index > 0xFFFF)
 			{
 				index &= 0xFFFF;
 				FREG ^= 0x10;
 			}
+			
 			if ((SP & 0x0FFF) + MEM[PC] > 0xFFF)
 				FREG ^= 0x20;
 				
-			int val = MEM[index];
+			val = MEM[index];
 			HREG = (val & 0xF0);
 			LREG = (val & 0x0F);
 			PC++;
