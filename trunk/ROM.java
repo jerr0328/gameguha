@@ -40,7 +40,7 @@ public class ROM{
 	}
 	
 	// Returns true if the ROM is a Color GB
-	public boolean isColorGB(){
+	public boolean isCGB(){
 		if(MEM[0x0143]==0){
 			return false;
 		}
@@ -51,28 +51,28 @@ public class ROM{
 	public void printCartType(){
 		String out="";
 		switch(MEM[0x0147]){
-			case 0x0: out="0-ROM ONLY"; break;
-			case 0x1: out="1-ROM+MBC1"; break;
-			case 0x2: out="2-ROM+MBC1+RAM"; break;
-			case 0x3: out="3-ROM+MBC1+RAM+BATT"; break;
-			case 0x5: out="5-ROM+MBC2"; break;
-			case 0x6: out="6-ROM+MBC2+BATTERY"; break;
-			case 0x8: out="8-ROM+RAM"; break;
-			case 0x9: out="9-ROM+RAM+BATTERY"; break;
-			case 0xB: out="B-ROM+MMM01"; break;
-			case 0xC: out="C-ROM+MMM01+SRAM"; break;
-			case 0xD: out="D-ROM+MMM01+SRAM+BATT"; break;
-			case 0x12: out="12-ROM+MBC3+RAM"; break;
-			case 0x13: out="13-ROM+MBC3+RAM+BATT"; break;
-			case 0x19: out="19-ROM+MBC5"; break;
-			case 0x1A: out="1A-ROM+MBC5+RAM"; break;
-			case 0x1B: out="1B-ROM+MBC5+RAM+BATT"; break;
-			case 0x1C: out="1C-ROM+MBC5+RUMBLE"; break;
-			case 0x1D: out="1D-ROM+MBC5+RUMBLE+SRAM"; break;
-			case 0x1E: out="1E-ROM+MBC5+RUMBLE+SRAM+BATT"; break;
-			case 0x1F: out="1F-Pocket Camera"; break;
-			case 0xFD: out="FD-Bandai TAMA5"; break;
-			case 0xFE: out="FE-Hudson HuC-3"; break;
+			case 0x0: out="0 ROM ONLY"; break;
+			case 0x1: out="1 ROM+MBC1"; break;
+			case 0x2: out="2 ROM+MBC1+RAM"; break;
+			case 0x3: out="3 ROM+MBC1+RAM+BATT"; break;
+			case 0x5: out="5 ROM+MBC2"; break;
+			case 0x6: out="6 ROM+MBC2+BATTERY"; break;
+			case 0x8: out="8 ROM+RAM"; break;
+			case 0x9: out="9 ROM+RAM+BATTERY"; break;
+			case 0xB: out="B ROM+MMM01"; break;
+			case 0xC: out="C ROM+MMM01+SRAM"; break;
+			case 0xD: out="D ROM+MMM01+SRAM+BATT"; break;
+			case 0x12: out="12 ROM+MBC3+RAM"; break;
+			case 0x13: out="13 ROM+MBC3+RAM+BATT"; break;
+			case 0x19: out="19 ROM+MBC5"; break;
+			case 0x1A: out="1A ROM+MBC5+RAM"; break;
+			case 0x1B: out="1B ROM+MBC5+RAM+BATT"; break;
+			case 0x1C: out="1C ROM+MBC5+RUMBLE"; break;
+			case 0x1D: out="1D ROM+MBC5+RUMBLE+SRAM"; break;
+			case 0x1E: out="1E ROM+MBC5+RUMBLE+SRAM+BATT"; break;
+			case 0x1F: out="1F Pocket Camera"; break;
+			case 0xFD: out="FD Bandai TAMA5"; break;
+			case 0xFE: out="FE Hudson HuC-3"; break;
 			
 		}
 		System.out.println("Cartridge type: "+out);
