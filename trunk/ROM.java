@@ -77,7 +77,38 @@ public class ROM{
 		}
 		System.out.println("Cartridge type: "+out);
 	}
+	// Prints ROM size, as specified in docs
+	public void printROMSize(){
+		String out="";
+		switch(MEM[0x148]){
+			case 0x0: out="32KB (no bank)"; break;
+			case 0x1: out="64KB (4 bank)"; break;
+			case 0x2: out="128KB (8 banks)"; break;
+			case 0x3: out="256KB (16 banks)"; break;
+			case 0x4: out="512KB (32 banks)"; break;
+			case 0x5: out="1MB (64 banks)"; break;
+			case 0x6: out="2MB (128 banks)"; break;
+			case 0x7: out="4MB (256 banks)"; break;
+			case 0x52: out="1.1MB (72 banks)"; break;
+			case 0x53: out="1.2MB (80 banks)"; break;
+			case 0x54: out="1.5MB (96 banks)"; break;
+			
+		}
+		System.out.println("ROM Size: "+out);
+	}
 	
+	public void printRAMSize(){
+		String out="";
+		switch(MEM[0x149]){
+			case 0x0: out="no RAM"; break;
+			case 0x1: out="2KB RAM"; break;
+			case 0x2: out="8KB RAM"; break;
+			case 0x3: out="32KB RAM (8x4)"; break;
+			case 0x4: out="128KB RAM (8x16)"; break;
+		
+		}
+		System.out.println("RAM Size: "+out);
+	}
 	// Prints game title
 	public void printTitle(){
 		System.out.print("ROM Title: ");
