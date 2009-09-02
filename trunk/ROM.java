@@ -110,8 +110,9 @@ public class ROM{
 		System.out.println("RAM Size: "+out);
 	}
 
-	//Verify checksum of ROM
-	public void verifyChecksum(){
+	// Verify checksum of ROM, prints result
+	// Returns true if checksum is valid, otherwise false
+	public boolean verifyChecksum(){
 		final int[] nintyBitmap = 
 		{0xCE,0xED,0x66,0x66,0xCC,0x0D,0x00,0x0B,0x03,
 		 0x73,0x00,0x83,0x00,0x0C,0x00,0x0D,0x00,0x08,
@@ -139,11 +140,14 @@ public class ROM{
 			{
 				x=x-MEM[ptr]-1; //checksum algorithm
 			}
-			if((x&0xFF) == MEM[ptr])
+			if((x&0xFF) == MEM[ptr]){
 				System.out.println("Header Checksum Valid");
-			else
-				System.out.println("Header Checksum Invalid");
+				return true;
+			}
+			// else
+			System.out.println("Header Checksum Invalid");
 		}
+		return false;
 	}
 	
 	// Prints game title
