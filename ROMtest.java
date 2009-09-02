@@ -1,7 +1,7 @@
 public class ROMtest {
 
     public static void main(String[] args) {
-        ROM rom = new ROM("../ROMS/bmbc.gbc");
+        ROM rom = new ROM(args[0]);
         rom.printTitle();
         rom.printCartType();
 		rom.printROMSize();
