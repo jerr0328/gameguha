@@ -13,6 +13,8 @@ public class CPU
 	private static int[] MEM = new int[0x10000]; // (== 0xFFFF+1 == 1<<16)
 	private static int[][] FLAG_ADD;
 	private static int[][] FLAG_SUB;
+	private static int[] FLAG_INC;
+	private static int[] FLAG_DEC;
 	
 	private static final int ZERO       = 0x80;
 	private static final int SUBTRACT   = 0x40;
@@ -21,9 +23,14 @@ public class CPU
 	
 	private static int numCycles = 0;
 	
-	public int getMem(int index)
+	public static int getMem(int index)
 	{
 		return MEM[index];
+	}
+	
+	public static void writeMem(int index, int byteVal)
+	{
+		MEM[index] = byteVal;
 	}
 	
 	public static void genFlagTable()
@@ -61,6 +68,26 @@ public class CPU
 					FREG |= ZERO;
 				FLAG_SUB[a][b] = flag;
 			}
+		
+		FLAG_INC = new int[256];
+		FLAG_DEC = new int[256];
+		
+		for (int a = 0; a <= 255; a++)
+		{
+				flag = 0;
+				if ((a & 0x0F) == 0x0F)
+					flag |= HALF_CARRY;
+				if (a == 255)
+					flag |= ZERO;
+				FLAG_INC[a] = flag;
+				
+				flag = SUBTRACT;
+				if ((a & 0x0F) == 0)
+					flag |= HALF_CARRY;
+				if (a == 1)
+					flag |= ZERO;
+				FLAG_DEC[a] = flag;
+		}
 	}
 	
 	public static int execute(int opcode)
@@ -68,7 +95,7 @@ public class CPU
 		switch(opcode)
 		{
 			case 0x00: //NOP
-				numCycles+=4;
+				numCycles++;
 			break;
 			
 			case 0x01: //LD BC,nn
@@ -82,19 +109,45 @@ public class CPU
 				numCycles+=2;
 			break;
 			
+			case 0x04: // INC B
+				FREG = FLAG_INC[BREG] | (FREG & CARRY);
+				BREG = (BREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x05: // DEC B
+				FREG = FLAG_DEC[BREG] | (FREG & CARRY);
+				BREG = (BREG-1) & 0xFF;
+				numCycles++;
+			break;
+			
 			case 0x06: //LD B,n
 				BREG = MEM[++PC];
 				numCycles+=2;
 			break;
 			
 			case 0x08: //LD (nn),SP
-				MEM[ ( MEM[++PC] << 8 ) | MEM[++PC] ] = SP;
+				{int val = ( MEM[++PC] << 8 ) | MEM[++PC];
+				MEM[val] = SP >> 8;
+				MEM[val+1] = SP & 0x00FF;}
 				numCycles+=5;
 			break;
 			
 			case 0x0A: //LD A,(BC)
 				AREG = MEM[ ( BREG << 8) | CREG ];
 				numCycles+=2;
+			break;
+			
+			case 0x0C: // INC C
+				FREG = FLAG_INC[CREG] | (FREG & CARRY);
+				CREG = (CREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x0D: // DEC C
+				FREG = FLAG_DEC[CREG] | (FREG & CARRY);
+				CREG = (CREG-1) & 0xFF;
+				numCycles++;
 			break;
 				
 			case 0x0E: //LD C,n
@@ -113,6 +166,18 @@ public class CPU
 				numCycles+=2;
 			break;
 			
+			case 0x14: // INC D
+				FREG = FLAG_INC[DREG] | (FREG & CARRY);
+				DREG = (DREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x15: // DEC D
+				FREG = FLAG_DEC[DREG] | (FREG & CARRY);
+				DREG = (DREG-1) & 0xFF;
+				numCycles++;
+			break;
+			
 			case 0x16: //LD D,n
 				DREG=MEM[++PC];
 				numCycles+=2;
@@ -122,17 +187,24 @@ public class CPU
 				AREG = MEM[ ( DREG << 8 ) | EREG ];
 				numCycles+=2;
 			break;
+			
+			case 0x1C: // INC E
+				FREG = FLAG_INC[EREG] | (FREG & CARRY);
+				EREG = (EREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x1D: // DEC E
+				FREG = FLAG_DEC[EREG] | (FREG & CARRY);
+				EREG = (EREG-1) & 0xFF;
+				numCycles++;
+			break;
 		
 			case 0x1E: //LD E,n
 				EREG=MEM[++PC];
 				numCycles+=2;
 			break;
 			
-			case 0x26: //LD H,n
-				HREG=MEM[++PC];
-				numCycles+=2;
-			break;
-		
 			case 0x21: //LD HL,nn
 				HREG = MEM[++PC];
 				LREG = MEM[++PC];
@@ -142,21 +214,50 @@ public class CPU
 			case 0x22: //LDI (HL),A
 				{int val = (HREG << 8) | LREG;
 				MEM[val] = AREG;
-				val++;
-				HREG = val >> 8;
-				LREG = val & 0x00FF;}
-				numCycles+=2;
-			break;	
-			
-			case 0x2A: //LDI A,(HL)
-				{int val = (HREG << 8) | LREG;
-				AREG = MEM[val];
-				val++;
+				val = (val+1) & 0xFFFF;
 				HREG = val >> 8;
 				LREG = val & 0x00FF;}
 				numCycles+=2;
 			break;
-				
+			
+			case 0x24: // INC H
+				FREG = FLAG_INC[HREG] | (FREG & CARRY);
+				HREG = (HREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x25: // DEC H
+				FREG = FLAG_DEC[HREG] | (FREG & CARRY);
+				HREG = (HREG-1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x26: //LD H,n
+				HREG=MEM[++PC];
+				numCycles+=2;
+			break;
+			
+			case 0x2A: //LDI A,(HL)
+				{int val = (HREG << 8) | LREG;
+				AREG = MEM[val];
+				val = (val+1) & 0xFFFF;
+				HREG = val >> 8;
+				LREG = val & 0x00FF;}
+				numCycles+=2;
+			break;
+			
+			case 0x2C: // INC L
+				FREG = FLAG_INC[LREG] | (FREG & CARRY);
+				LREG = (LREG+1) & 0xFF;
+				numCycles++;
+			break;
+			
+			case 0x2D: // DEC L
+				FREG = FLAG_DEC[LREG] | (FREG & CARRY);
+				LREG = (LREG-1) & 0xFF;
+				numCycles++;
+			break;
+			
 			case 0x2E: //LD L,n
 				LREG=MEM[++PC];
 				numCycles+=2;
@@ -170,26 +271,52 @@ public class CPU
 			case 0x32: //LDD (HL),A
 				{int val = (HREG << 8) | LREG;
 				MEM[val] = AREG;
-				val--;
+				val = (val-1) & 0xFFFF;
 				HREG = val >> 8;
 				LREG = val & 0x00FF;}
 				numCycles+=2;
+			break;
+			
+			case 0x34: // INC (HL)
+				{int val = (HREG << 8) | LREG;
+				FREG = FLAG_INC[MEM[val]] | (FREG & CARRY);
+				MEM[val] = (MEM[val] + 1) & 0xFF;}
+				numCycles+=3;
+			break;
+			
+			case 0x35: // DEC (HL)
+				{int val = (HREG << 8) | LREG;
+				FREG = FLAG_DEC[MEM[val]] | (FREG & CARRY);
+				MEM[val] = (MEM[val] - 1) & 0xFF;}
+				numCycles+=3;
+			break;
+			
+			case 0x36: //LD (HL),n
+				MEM[ ( HREG << 8) | LREG ] = MEM[++PC];
+				numCycles+=3;
 			break;
 				
 			case 0x3A: //LDD A,(HL)
 				{int val = (HREG << 8) | LREG;
 				AREG = MEM[val];
-				val--;
+				val = (val-1) & 0xFFFF;
 				HREG = val >> 8;
 				LREG = val & 0x00FF;}
 				numCycles+=2;
 			break;
-		
-			case 0x36: //LD (HL),n
-				MEM[ ( HREG << 8) | LREG ] = MEM[++PC];
-				numCycles+=3;
+			
+			case 0x3C: // INC A
+				FREG = FLAG_INC[AREG] | (FREG & CARRY);
+				AREG = (AREG+1) & 0xFF;
+				numCycles++;
 			break;
-					
+			
+			case 0x3D: // DEC A
+				FREG = FLAG_DEC[AREG] | (FREG & CARRY);
+				AREG = (AREG-1) & 0xFF;
+				numCycles++;
+			break;
+			
 			case 0x3E: //LD A,n
 				AREG = MEM[++PC];
 				numCycles+=2;
@@ -1127,7 +1254,9 @@ public class CPU
 				numCycles+=2;
 			break;
 			
-			default: System.out.format("Not implemented: %02X\n",opcode);
+			default:
+				System.out.format("Not implemented: %02X\n",opcode);
+			break;
 		}
 		++PC;
 		
