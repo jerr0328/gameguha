@@ -62,6 +62,10 @@ public class CPU
 	{
 		switch(opcode)
 		{
+			case 0x00: //NOP
+				numCycles+=4;
+			break;
+			
 			case 0x01: //LD BC,nn
 				BREG = MEM[++PC];
 				CREG = MEM[++PC];
@@ -1117,6 +1121,8 @@ public class CPU
 				FREG = FLAG_SUB[ MEM[++PC] ][AREG];
 				numCycles+=2;
 			break;
+			
+			default: System.out.format("Not implemented: %02X\n",opcode);
 		}
 		++PC;
 		

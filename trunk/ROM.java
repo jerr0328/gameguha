@@ -29,6 +29,12 @@ public class ROM{
 		
 	}
 	
+	//Get MEM construct
+	public int getMem(int index)
+	{
+		return MEM[index+0x100]; //for now.. start of Working ROM. Testing.
+	}
+	
 	// Dumps some data... use for debugging
 	public void dumpData(){
 		System.out.println("Dump:");
