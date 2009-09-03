@@ -17,6 +17,7 @@ public class ROMtest {
 		for(int i=0x100;i<0x4000;i++)
 		{
 			System.out.format("Executing: 0x%02X @ 0x%02X\n",rom.getMem(i),i);
+			System.out.println("CPU MEMORY: "+cpu.getMem(0));
 			cpu.execute(rom.getMem(i));
 			System.out.println("OK!");
 		}

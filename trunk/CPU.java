@@ -21,6 +21,11 @@ public class CPU
 	
 	private static int numCycles = 0;
 	
+	public int getMem(int index)
+	{
+		return MEM[index];
+	}
+	
 	public static void genFlagTable()
 	{
 		FLAG_ADD = new int[257][256]; // max 255 + 1 (carry) = 256
@@ -536,6 +541,8 @@ public class CPU
 			
 			case 0x86: // ADD A,(HL)
 				{int val = MEM[(HREG << 8) | LREG];
+				System.out.println("val: "+val+" H<<8|L: "+((HREG << 8)|LREG));
+				System.out.println("MEM: "+MEM[0]);
 				FREG = FLAG_ADD[val][AREG];
 				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
