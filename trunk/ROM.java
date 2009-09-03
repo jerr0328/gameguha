@@ -29,10 +29,10 @@ public class ROM{
 		
 	}
 	
-	//Get MEM construct
+	// For now, just returns get Memory from ROM at specified address
 	public int getMem(int index)
 	{
-		return MEM[index+0x100]; //for now.. start of Working ROM. Testing.
+		return MEM[index];
 	}
 	
 	// Dumps some data... use for debugging
