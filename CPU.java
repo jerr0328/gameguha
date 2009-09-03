@@ -541,8 +541,6 @@ public class CPU
 			
 			case 0x86: // ADD A,(HL)
 				{int val = MEM[(HREG << 8) | LREG];
-				System.out.println("val: "+val+" H<<8|L: "+((HREG << 8)|LREG));
-				System.out.println("MEM: "+MEM[0]);
 				FREG = FLAG_ADD[val][AREG];
 				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
