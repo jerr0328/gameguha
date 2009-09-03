@@ -16,7 +16,7 @@ public class ROMtest {
 		cpu.genFlagTable();
 		for(int i=0;i<=0x4000;i++)
 		{
-			System.out.format("Executing: %02X\n",rom.getMem(i));
+			System.out.format("Executing: 0x%02X @ 0x%02X\n",rom.getMem(i),i);
 			cpu.execute(rom.getMem(i));
 			System.out.println("OK!");
 		}
