@@ -10,6 +10,7 @@ public class CPU
 	private static int LREG;
 	private static int SP=0xFFFE; // GameBoy inits to 0xFFFE
 	private static int PC=0x0100; // will be 0x0100 by ROM
+	private static boolean IME = true;
 	private static int[] MEM = new int[0x10000]; // (== 0xFFFF+1 == 1<<16)
 	private static int[][] FLAG_ADD;
 	private static int[][] FLAG_SUB;
@@ -49,10 +50,10 @@ public class CPU
 				if (result > 0xFF)
 				{
 					result &= 0xFF;
-					FREG |= CARRY;
+					flag |= CARRY;
 				}
 				if (result == 0)
-					FREG |= ZERO;
+					flag |= ZERO;
 				FLAG_ADD[a][b] = flag;
 				
 				result = b-a;
@@ -62,10 +63,10 @@ public class CPU
 				if (result < 0)
 				{
 					result &= 0xFF;
-					FREG |= CARRY;
+					flag |= CARRY;
 				}
 				if (result == 0)
-					FREG |= ZERO;
+					flag |= ZERO;
 				FLAG_SUB[a][b] = flag;
 			}
 		
@@ -189,6 +190,12 @@ public class CPU
 			case 0x0E: //LD C,n
 				numCycles+=2;
 				CREG=MEM[++PC];
+			break;
+			
+			case 0x10: // STOP
+				numCycles++;
+				++PC; // consume next byte (assume 0x00)
+				// *TODO: give control to key listener*
 			break;
 			
 			case 0x11: //LD DE,nn
@@ -316,6 +323,40 @@ public class CPU
 				HREG=MEM[++PC];
 			break;
 			
+			case 0x27: // DAA
+				numCycles++;
+				if ((FREG & SUBTRACT) != 0)
+				{
+					if ((AREG & 0x0F) > 0x09 || (FREG & HALF_CARRY) != 0)
+						AREG -= 0x06;
+					if ((AREG & 0xF0) > 0x90 || (FREG & CARRY) != 0)
+					{
+						AREG -= 0x60;
+						FREG |= CARRY;
+					}
+					else
+						FREG &= ~CARRY;
+				}
+				else
+				{
+					if ((AREG & 0x0F) > 0x09 || (FREG & HALF_CARRY) != 0)
+						AREG += 0x06;
+					if ((AREG & 0xF0) > 0x90 || (FREG & CARRY) != 0)
+					{
+						AREG += 0x60;
+						FREG |= CARRY;
+					}
+					else
+						FREG &= ~CARRY;
+				}
+				FREG &= ~HALF_CARRY;
+				AREG &= 0xFF;
+				if (AREG == 0)
+					FREG |= ZERO;
+				else
+					FREG &= ~ZERO;
+			break;
+			
 			case 0x29: // ADD HL,HL
 				numCycles+=2;
 				FREG &= ZERO;
@@ -365,6 +406,12 @@ public class CPU
 				LREG=MEM[++PC];
 			break;
 			
+			case 0x2F: // CPL
+				numCycles++;
+				FREG |= (SUBTRACT | HALF_CARRY);
+				AREG ^= 0xFF; // faster than (~AREG) & 0xFF
+			break;
+			
 			case 0x31: //LD SP,nn
 				numCycles+=3;
 				SP = ( ( MEM[++PC] << 8 ) | MEM[++PC] );
@@ -401,6 +448,12 @@ public class CPU
 			case 0x36: //LD (HL),n
 				numCycles+=3;
 				MEM[ ( HREG << 8) | LREG ] = MEM[++PC];
+			break;
+			
+			case 0x37: // SCF
+				numCycles++;
+				FREG &= ~(SUBTRACT | HALF_CARRY);
+				FREG |= CARRY;
 			break;
 			
 			case 0x39: // ADD HL,SP
@@ -445,6 +498,12 @@ public class CPU
 			case 0x3E: //LD A,n
 				numCycles+=2;
 				AREG = MEM[++PC];
+			break;
+			
+			case 0x3F: // CCF
+				numCycles++;
+				FREG &= ~(SUBTRACT | HALF_CARRY);
+				FREG ^= CARRY;
 			break;
 						
 			case 0x40: //LD B,B
@@ -709,6 +768,14 @@ public class CPU
 			case 0x75: //LD (HL),L
 				numCycles+=2;
 				MEM[ ( HREG << 8 ) | LREG ] = LREG;
+			break;
+			
+			case 0x76: // HALT
+				numCycles++;
+				//if (IME)
+					//*give control to interrupt handler*
+				//else
+					//++PC; (skip next instruction in GB mode)
 			break;
 		
 			case 0x77: // LD (HL),A
@@ -1440,6 +1507,12 @@ public class CPU
 				AREG = MEM[ 0xFF00 + CREG ];
 			break;
 			
+			case 0xF3: // DI
+				numCycles++;
+				IME = false; 
+				// *Officially should occur 1 instruction later. We'll see how it works...*
+			break;
+			
 			case 0xF5: // PUSH AF
 				numCycles+=4;
 				MEM[--SP] = FREG;
@@ -1478,6 +1551,12 @@ public class CPU
 			case 0xFA: //LD A,(nn)
 				numCycles+=4;
 				AREG = MEM[ MEM[++PC] | (MEM[++PC] << 8) ];
+			break;
+			
+			case 0xFB: // EI
+				numCycles++;
+				IME = true; 
+				// *Officially should occur 1 instruction later. We'll see how it works...*
 			break;
 			
 			case 0xFE: // CP n
