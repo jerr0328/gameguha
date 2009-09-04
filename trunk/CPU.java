@@ -92,6 +92,9 @@ public class CPU
 	
 	public static int execute(int opcode)
 	{
+		int val;
+		byte offset;
+		
 		switch(opcode)
 		{
 			case 0x00: //NOP
@@ -99,227 +102,349 @@ public class CPU
 			break;
 			
 			case 0x01: //LD BC,nn
+				numCycles+=3;
 				BREG = MEM[++PC];
 				CREG = MEM[++PC];
-				numCycles+=3;
 			break;
 			
 			case 0x02: //LD (BC),A
-				MEM[ (BREG << 8) | CREG ] = AREG;
 				numCycles+=2;
+				MEM[ (BREG << 8) | CREG ] = AREG;
+			break;
+			
+			case 0x03: // INC BC
+				numCycles+=2;
+				CREG++;
+				if (CREG > 0xFF)
+				{
+					CREG = 0;
+					BREG = (BREG+1) & 0xFF;
+				}
 			break;
 			
 			case 0x04: // INC B
+				numCycles++;
 				FREG = FLAG_INC[BREG] | (FREG & CARRY);
 				BREG = (BREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x05: // DEC B
+				numCycles++;
 				FREG = FLAG_DEC[BREG] | (FREG & CARRY);
 				BREG = (BREG-1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x06: //LD B,n
-				BREG = MEM[++PC];
 				numCycles+=2;
+				BREG = MEM[++PC];
 			break;
 			
 			case 0x08: //LD (nn),SP
-				{int val = ( MEM[++PC] << 8 ) | MEM[++PC];
-				MEM[val] = SP >> 8;
-				MEM[val+1] = SP & 0x00FF;}
 				numCycles+=5;
+				val = ( MEM[++PC] << 8 ) | MEM[++PC];
+				MEM[val] = SP >> 8;
+				MEM[val+1] = SP & 0x00FF;
+			break;
+			
+			case 0x09: // ADD HL,BC
+				numCycles+=2;
+				FREG &= ZERO;
+				LREG += CREG;
+				HREG += BREG + (LREG >> 8);
+				LREG &= 0xFF;
+				if (HREG > 0xFF)
+				{
+					HREG &= 0xFF;
+					FREG |= CARRY;
+				}
 			break;
 			
 			case 0x0A: //LD A,(BC)
-				AREG = MEM[ ( BREG << 8) | CREG ];
 				numCycles+=2;
+				AREG = MEM[ ( BREG << 8) | CREG ];
+			break;
+			
+			case 0x0B: // DEC BC
+				numCycles+=2;
+				CREG--;
+				if (CREG < 0)
+				{
+					CREG = 0xFF;
+					BREG = (BREG-1) & 0xFF;
+				}
 			break;
 			
 			case 0x0C: // INC C
+				numCycles++;
 				FREG = FLAG_INC[CREG] | (FREG & CARRY);
 				CREG = (CREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x0D: // DEC C
+				numCycles++;
 				FREG = FLAG_DEC[CREG] | (FREG & CARRY);
 				CREG = (CREG-1) & 0xFF;
-				numCycles++;
 			break;
 				
 			case 0x0E: //LD C,n
-				CREG=MEM[++PC];
 				numCycles+=2;
+				CREG=MEM[++PC];
 			break;
 			
 			case 0x11: //LD DE,nn
+				numCycles+=3;
 				DREG = MEM[++PC];
 				EREG = MEM[++PC];
-				numCycles+=3;
 			break;
 			
 			case 0x12: //LD (DE),A
-				MEM[ (DREG << 8) | EREG ] = AREG;
 				numCycles+=2;
+				MEM[ (DREG << 8) | EREG ] = AREG;
+			break;
+			
+			case 0x13: // INC DE
+				numCycles+=2;
+				EREG++;
+				if (EREG > 0xFF)
+				{
+					EREG = 0;
+					DREG = (DREG+1) & 0xFF;
+				}
 			break;
 			
 			case 0x14: // INC D
+				numCycles++;
 				FREG = FLAG_INC[DREG] | (FREG & CARRY);
 				DREG = (DREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x15: // DEC D
+				numCycles++;
 				FREG = FLAG_DEC[DREG] | (FREG & CARRY);
 				DREG = (DREG-1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x16: //LD D,n
-				DREG=MEM[++PC];
 				numCycles+=2;
+				DREG=MEM[++PC];
+			break;
+			
+			case 0x19: // ADD HL,DE
+				numCycles+=2;
+				FREG &= ZERO;
+				LREG += EREG;
+				HREG += DREG + (LREG >> 8);
+				LREG &= 0xFF;
+				if (HREG > 0xFF)
+				{
+					HREG &= 0xFF;
+					FREG |= CARRY;
+				}
 			break;
 				
 			case 0x1A: //LD A,(DE)
-				AREG = MEM[ ( DREG << 8 ) | EREG ];
 				numCycles+=2;
+				AREG = MEM[ ( DREG << 8 ) | EREG ];
+			break;
+			
+			case 0x1B: // DEC DE
+				numCycles+=2;
+				EREG--;
+				if (EREG < 0)
+				{
+					EREG = 0xFF;
+					DREG = (DREG-1) & 0xFF;
+				}
 			break;
 			
 			case 0x1C: // INC E
+				numCycles++;
 				FREG = FLAG_INC[EREG] | (FREG & CARRY);
 				EREG = (EREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x1D: // DEC E
+				numCycles++;
 				FREG = FLAG_DEC[EREG] | (FREG & CARRY);
 				EREG = (EREG-1) & 0xFF;
-				numCycles++;
 			break;
 		
 			case 0x1E: //LD E,n
-				EREG=MEM[++PC];
 				numCycles+=2;
+				EREG=MEM[++PC];
 			break;
 			
 			case 0x21: //LD HL,nn
+				numCycles+=3;
 				HREG = MEM[++PC];
 				LREG = MEM[++PC];
-				numCycles+=3;
 			break;
 			
 			case 0x22: //LDI (HL),A
-				{int val = (HREG << 8) | LREG;
+				numCycles+=2;
+				val = (HREG << 8) | LREG;
 				MEM[val] = AREG;
 				val = (val+1) & 0xFFFF;
 				HREG = val >> 8;
-				LREG = val & 0x00FF;}
+				LREG = val & 0x00FF;
+			break;
+			
+			case 0x23: // INC HL
 				numCycles+=2;
+				LREG++;
+				if (LREG > 0xFF)
+				{
+					LREG = 0;
+					HREG = (HREG+1) & 0xFF;
+				}
 			break;
 			
 			case 0x24: // INC H
+				numCycles++;
 				FREG = FLAG_INC[HREG] | (FREG & CARRY);
 				HREG = (HREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x25: // DEC H
+				numCycles++;
 				FREG = FLAG_DEC[HREG] | (FREG & CARRY);
 				HREG = (HREG-1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x26: //LD H,n
-				HREG=MEM[++PC];
 				numCycles+=2;
+				HREG=MEM[++PC];
+			break;
+			
+			case 0x29: // ADD HL,HL
+				numCycles+=2;
+				FREG &= ZERO;
+				LREG += LREG;
+				HREG += HREG + (LREG >> 8);
+				LREG &= 0xFF;
+				if (HREG > 0xFF)
+				{
+					HREG &= 0xFF;
+					FREG |= CARRY;
+				}
 			break;
 			
 			case 0x2A: //LDI A,(HL)
-				{int val = (HREG << 8) | LREG;
+				numCycles+=2;
+				val = (HREG << 8) | LREG;
 				AREG = MEM[val];
 				val = (val+1) & 0xFFFF;
 				HREG = val >> 8;
-				LREG = val & 0x00FF;}
+				LREG = val & 0x00FF;
+			break;
+			
+			case 0x2B: // DEC HL
 				numCycles+=2;
+				LREG--;
+				if (LREG < 0)
+				{
+					LREG = 0xFF;
+					HREG = (HREG-1) & 0xFF;
+				}
 			break;
 			
 			case 0x2C: // INC L
+				numCycles++;
 				FREG = FLAG_INC[LREG] | (FREG & CARRY);
 				LREG = (LREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x2D: // DEC L
+				numCycles++;
 				FREG = FLAG_DEC[LREG] | (FREG & CARRY);
 				LREG = (LREG-1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x2E: //LD L,n
-				LREG=MEM[++PC];
 				numCycles+=2;
+				LREG=MEM[++PC];
 			break;
 			
 			case 0x31: //LD SP,nn
-				SP = ( ( MEM[++PC] << 8 ) | MEM[++PC] );
 				numCycles+=3;
+				SP = ( ( MEM[++PC] << 8 ) | MEM[++PC] );
 			break;
 			
 			case 0x32: //LDD (HL),A
-				{int val = (HREG << 8) | LREG;
+				numCycles+=2;
+				val = (HREG << 8) | LREG;
 				MEM[val] = AREG;
 				val = (val-1) & 0xFFFF;
 				HREG = val >> 8;
-				LREG = val & 0x00FF;}
+				LREG = val & 0x00FF;
+			break;
+			
+			case 0x33: // INC SP
 				numCycles+=2;
+				SP = (SP+1) & 0xFFFF;
 			break;
 			
 			case 0x34: // INC (HL)
-				{int val = (HREG << 8) | LREG;
-				FREG = FLAG_INC[MEM[val]] | (FREG & CARRY);
-				MEM[val] = (MEM[val] + 1) & 0xFF;}
 				numCycles+=3;
+				val = (HREG << 8) | LREG;
+				FREG = FLAG_INC[MEM[val]] | (FREG & CARRY);
+				MEM[val] = (MEM[val] + 1) & 0xFF;
 			break;
 			
 			case 0x35: // DEC (HL)
-				{int val = (HREG << 8) | LREG;
-				FREG = FLAG_DEC[MEM[val]] | (FREG & CARRY);
-				MEM[val] = (MEM[val] - 1) & 0xFF;}
 				numCycles+=3;
+				val = (HREG << 8) | LREG;
+				FREG = FLAG_DEC[MEM[val]] | (FREG & CARRY);
+				MEM[val] = (MEM[val] - 1) & 0xFF;
 			break;
 			
 			case 0x36: //LD (HL),n
-				MEM[ ( HREG << 8) | LREG ] = MEM[++PC];
 				numCycles+=3;
+				MEM[ ( HREG << 8) | LREG ] = MEM[++PC];
+			break;
+			
+			case 0x39: // ADD HL,SP
+				numCycles+=2;
+				FREG &= ZERO;
+				val = ((HREG << 8) | LREG) + SP;
+				if (val > 0xFFFF)
+				{
+					val &= 0xFFFF;
+					FREG |= CARRY;
+				}
+				HREG = val >> 8;
+				LREG = val & 0xFF;
 			break;
 				
 			case 0x3A: //LDD A,(HL)
-				{int val = (HREG << 8) | LREG;
+				numCycles+=2;
+				val = (HREG << 8) | LREG;
 				AREG = MEM[val];
 				val = (val-1) & 0xFFFF;
 				HREG = val >> 8;
-				LREG = val & 0x00FF;}
+				LREG = val & 0x00FF;
+			break;
+			
+			case 0x3B: // DEC SP
 				numCycles+=2;
+				SP = (SP-1) & 0xFFFF;
 			break;
 			
 			case 0x3C: // INC A
+				numCycles++;
 				FREG = FLAG_INC[AREG] | (FREG & CARRY);
 				AREG = (AREG+1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x3D: // DEC A
+				numCycles++;
 				FREG = FLAG_DEC[AREG] | (FREG & CARRY);
 				AREG = (AREG-1) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x3E: //LD A,n
-				AREG = MEM[++PC];
 				numCycles+=2;
+				AREG = MEM[++PC];
 			break;
 						
 			case 0x40: //LD B,B
@@ -327,43 +452,43 @@ public class CPU
 			break;
 			
 			case 0x41: //LD B,C
-				BREG=CREG;
 				numCycles++;
+				BREG=CREG;
 			break;
 			
 			case 0x42: //LD B,D
-				BREG=DREG;
 				numCycles++;
+				BREG=DREG;
 			break;
 			
 			case 0x43: //LD B,E
-				BREG=EREG;
 				numCycles++;
+				BREG=EREG;
 			break;
 			
 			case 0x44: //LD B,H
-				BREG=HREG;
 				numCycles++;
+				BREG=HREG;
 			break;
 			
 			case 0x45: //LD B,L
-				BREG=LREG;
 				numCycles++;
+				BREG=LREG;
 			break;
 			
 			case 0x46: //LD B,(HL)
-				BREG=MEM[ ( HREG << 8) | LREG ];
 				numCycles+=2;
+				BREG=MEM[ ( HREG << 8) | LREG ];
 			break;
 			
 			case 0x47: //LD B,A
-				BREG=AREG;
 				numCycles++;
+				BREG=AREG;
 			break;
 			
 			case 0x48: //LD C,B
-				CREG=BREG;
 				numCycles++;
+				CREG=BREG;
 			break;
 			
 			case 0x49: //LD C,C
@@ -371,43 +496,43 @@ public class CPU
 			break;
 			
 			case 0x4A: //LD C,D
-				CREG=DREG;
 				numCycles++;
+				CREG=DREG;
 			break;
 			
 			case 0x4B: //LD C,E
-				CREG=EREG;
 				numCycles++;
+				CREG=EREG;
 			break;
 			
 			case 0x4C: //LD C,H
-				CREG=HREG;
 				numCycles++;
+				CREG=HREG;
 			break;
 			
 			case 0x4D: //LD C,L
-				CREG=LREG;
 				numCycles++;
+				CREG=LREG;
 			break;
 			
 			case 0x4E: //LD C,(HL)
-				CREG=MEM[ ( HREG << 8) | LREG ];
 				numCycles+=2;
+				CREG=MEM[ ( HREG << 8) | LREG ];
 			break;
 			
 			case 0x4F: //LD C,A
-				CREG=AREG;
 				numCycles++;
+				CREG=AREG;
 			break;
 			
 			case 0x50: //LD D,B
-				DREG=BREG;
 				numCycles++;
+				DREG=BREG;
 			break;
 			
 			case 0x51: //LD D,C
-				DREG=CREG;
 				numCycles++;
+				DREG=CREG;
 			break;
 				
 			case 0x52: //LD D,D
@@ -415,43 +540,43 @@ public class CPU
 			break;
 			
 			case 0x53: //LD D,E
-				DREG=EREG;
 				numCycles++;
+				DREG=EREG;
 			break;
 			
 			case 0x54: //LD D,H
-				DREG=HREG;
 				numCycles++;
+				DREG=HREG;
 			break;
 			
 			case 0x55: //LD D,L
-				DREG=LREG;
 				numCycles++;
+				DREG=LREG;
 			break;
 			
 			case 0x56: //LD D,(HL)
-				DREG=MEM[ ( HREG << 8) | LREG ];
 				numCycles+=2;
+				DREG=MEM[ ( HREG << 8) | LREG ];
 			break;
 			
 			case 0x57: //LD D,A
-				DREG=AREG;
 				numCycles++;
+				DREG=AREG;
 			break;
 			
 			case 0x58: //LD E,B
-				EREG=BREG;
 				numCycles++;
+				EREG=BREG;
 			break;
 			
 			case 0x59: //LD E,C
-				EREG=CREG;
 				numCycles++;
+				EREG=CREG;
 			break;
 			
 			case 0x5A: //LD E,D
-				EREG=DREG;
 				numCycles++;
+				EREG=DREG;
 			break;
 			
 			case 0x5B: //LD E,E
@@ -459,43 +584,43 @@ public class CPU
 			break;
 			
 			case 0x5C: //LD E,H
-				EREG=HREG;
 				numCycles++;
+				EREG=HREG;
 			break;
 			
 			case 0x5D: //LD E,L
-				EREG=LREG;
 				numCycles++;
+				EREG=LREG;
 			break;
 			
 			case 0x5E: //LD E,(HL)
-				EREG=MEM[ ( HREG << 8) | LREG ];
 				numCycles+=2;
+				EREG=MEM[ ( HREG << 8) | LREG ];
 			break;
 			
 			case 0x5F: //LD E,A
-				EREG=AREG;
 				numCycles++;
+				EREG=AREG;
 			break;
 			
 			case 0x60: //LD H,B
-				HREG=BREG;
 				numCycles++;
+				HREG=BREG;
 			break;
 			
 			case 0x61: //LD H,C
-				HREG=CREG;
 				numCycles++;
+				HREG=CREG;
 			break;
 			
 			case 0x62: //LD H,D
-				HREG=DREG;
 				numCycles++;
+				HREG=DREG;
 			break;
 			
 			case 0x63: //LD H,E
-				HREG=EREG;
 				numCycles++;
+				HREG=EREG;
 			break;
 			
 			case 0x64: //LD H,H
@@ -503,43 +628,43 @@ public class CPU
 			break;
 			
 			case 0x65: //LD H,L
-				HREG=LREG;
 				numCycles++;
+				HREG=LREG;
 			break;
 			
 			case 0x66: //LD H,(HL)
-				HREG=MEM[ ( HREG << 8 ) | LREG ];
 				numCycles+=2;
+				HREG=MEM[ ( HREG << 8 ) | LREG ];
 			break;
 			
 			case 0x67: //LD H,A
-				HREG=AREG;
 				numCycles++;
+				HREG=AREG;
 			break;
 			
 			case 0x68: //LD L,B
-				LREG=BREG;
 				numCycles++;
+				LREG=BREG;
 			break;
 			
 			case 0x69: //LD L,C
-				LREG=CREG;
 				numCycles++;
+				LREG=CREG;
 			break;
 			
 			case 0x6A: //LD L,D
-				LREG=DREG;
 				numCycles++;
+				LREG=DREG;
 			break;
 			
 			case 0x6B: //LD L,E
-				LREG=EREG;
 				numCycles++;
+				LREG=EREG;
 			break;
 			
 			case 0x6C: //LD L,H
-				LREG=HREG;
 				numCycles++;
+				LREG=HREG;
 			break;
 				
 			case 0x6D: //LD L,L
@@ -547,83 +672,83 @@ public class CPU
 			break;
 			
 			case 0x6E: //LD L,(HL)
-				LREG=MEM[ ( HREG << 8 ) | LREG ];
 				numCycles+=2;
+				LREG=MEM[ ( HREG << 8 ) | LREG ];
 			break;
 			
 			case 0x6F: //LD L,A
-				LREG=AREG;
 				numCycles++;
+				LREG=AREG;
 			break;
 			
 			case 0x70: //LD (HL),B
-				MEM[ ( HREG << 8 ) | LREG ] = BREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = BREG;
 			break;
 			
 			case 0x71: //LD (HL),C
-				MEM[ ( HREG << 8 ) | LREG ] = CREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = CREG;
 			break;
 			
 			case 0x72: //LD (HL),D
-				MEM[ ( HREG << 8 ) | LREG ] = DREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = DREG;
 			break;
 			
 			case 0x73: //LD (HL),E
-				MEM[ ( HREG << 8 ) | LREG ] = EREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = EREG;
 			break;
 			
 			case 0x74: //LD (HL),H
-				MEM[ ( HREG << 8 ) | LREG ] = HREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = HREG;
 			break;
 			
 			case 0x75: //LD (HL),L
-				MEM[ ( HREG << 8 ) | LREG ] = LREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = LREG;
 			break;
 		
 			case 0x77: // LD (HL),A
-				MEM[ ( HREG << 8 ) | LREG ] = AREG;
 				numCycles+=2;
+				MEM[ ( HREG << 8 ) | LREG ] = AREG;
 			break;
 			
 			case 0x78: //LD A,B
-				AREG=BREG;
 				numCycles++;
+				AREG=BREG;
 			break;
 		
 			case 0x79: //LD A,C
-				AREG=CREG;
 				numCycles++;
+				AREG=CREG;
 			break;
 		
 			case 0x7A: //LD A,D
-				AREG=DREG;
 				numCycles++;
+				AREG=DREG;
 			break;
 		
 			case 0x7B: //LD A,E
-				AREG=EREG;
 				numCycles++;
+				AREG=EREG;
 			break;
 		
 			case 0x7C: //LD A,H
-				AREG=HREG;
 				numCycles++;
+				AREG=HREG;
 			break;
 		
 			case 0x7D: //LD A,L
-				AREG=LREG;
 				numCycles++;
+				AREG=LREG;
 			break;
 		
 			case 0x7E: //LD A,(HL)
-				AREG=MEM[ ( HREG << 8 ) | LREG ];
 				numCycles+=2;
+				AREG=MEM[ ( HREG << 8 ) | LREG ];
 			break;
 			
 			case 0x7F: //LD A,A
@@ -631,601 +756,709 @@ public class CPU
 			break;
 			
 			case 0x80: //ADD A,B
+				numCycles++;
 				FREG = FLAG_ADD[BREG][AREG];
 				AREG = (AREG+BREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x81: //ADD A,C
+				numCycles++;
 				FREG = FLAG_ADD[CREG][AREG];
 				AREG = (AREG+CREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x82: //ADD A,D
+				numCycles++;
 				FREG = FLAG_ADD[DREG][AREG];
 				AREG = (AREG+DREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x83: //ADD A,E
+				numCycles++;
 				FREG = FLAG_ADD[EREG][AREG];
 				AREG = (AREG+EREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x84: //ADD A,H
+				numCycles++;
 				FREG = FLAG_ADD[HREG][AREG];
 				AREG = (AREG+LREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x85: //ADD A,L
+				numCycles++;
 				FREG = FLAG_ADD[LREG][AREG];
 				AREG = (AREG+LREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x86: // ADD A,(HL)
-				{int val = MEM[(HREG << 8) | LREG];
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[(HREG << 8) | LREG];
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG+val) & 0xFF;
 			break;
 			
 			case 0x87: //ADD A,A
+				numCycles++;
 				FREG = FLAG_ADD[AREG][AREG];
 				AREG = (AREG+AREG) & 0xFF;
-				numCycles++;
 			break;
 			
 			case 0x88: //ADC A,B
-				{int val = BREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = BREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x89: //ADC A,C
-				{int val = CREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = CREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x8A: //ADC A,D
-				{int val = DREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = DREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x8B: //ADC A,E
-				{int val = EREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = EREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x8C: //ADC A,H
-				{int val = HREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = HREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x8D: //ADC A,L
-				{int val = LREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = LREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x8E: //ADC A,(HL)
-				{int val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG+val) & 0xFF;
 			break;
 			
 			case 0x8F: //ADC A,A
-				{int val = AREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG + val) & 0xFF;}
 				numCycles++;
+				val = AREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG + val) & 0xFF;
 			break;
 			
 			case 0x90: // SUB A,B
+				numCycles++;
 				FREG = FLAG_SUB[BREG][AREG];
 				AREG = (AREG-BREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x91: // SUB A,C
+				numCycles++;
 				FREG = FLAG_SUB[CREG][AREG];
 				AREG = (AREG-CREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x92: // SUB A,D
+				numCycles++;
 				FREG = FLAG_SUB[DREG][AREG];
 				AREG = (AREG-DREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x93: // SUB A,E
+				numCycles++;
 				FREG = FLAG_SUB[EREG][AREG];
 				AREG = (AREG-EREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x94: // SUB A,H
+				numCycles++;
 				FREG = FLAG_SUB[HREG][AREG];
 				AREG = (AREG-HREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x95: // SUB A,L
+				numCycles++;
 				FREG = FLAG_SUB[LREG][AREG];
 				AREG = (AREG-LREG) &  0xFF;
-				numCycles++;
 			break;
 			
 			case 0x96: // SUB A,(HL)
-				{int val = MEM[(HREG << 8) | LREG];
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG-val) &  0xFF;}
 				numCycles+=2;
+				val = MEM[(HREG << 8) | LREG];
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG-val) &  0xFF;
 			break;
 			
 			case 0x97: // SUB A,A
+				numCycles++;
 				FREG = SUBTRACT | ZERO;
 				AREG = 0;
-				numCycles++;
 			break;
 			
 			case 0x98: // SBC A,B
-				{int val = BREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = BREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x99: // SBC A,C
-				{int val = CREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = CREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x9A: // SBC A,D
-				{int val = DREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = DREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x9B: // SBC A,E
-				{int val = EREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = EREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x9C: // SBC A,H
-				{int val = HREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = HREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x9D: // SBC A,L
-				{int val = LREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = LREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
+				
 			break;
 			
 			case 0x9E: // SBC A,(HL)
-				{int val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0x9F: // SBC A,A
-				{int val = AREG + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles++;
+				val = AREG + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0xA0: // AND B
+				numCycles++;
 				AREG &= BREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA1: // AND C
+				numCycles++;
 				AREG &= CREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA2: // AND D
+				numCycles++;
 				AREG &= DREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA3: // AND E
+				numCycles++;
 				AREG &= EREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA4: // AND H
+				numCycles++;
 				AREG &= HREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA5: // AND L
+				numCycles++;
 				AREG &= LREG;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA6: // AND (HL)
+				numCycles+=2;
 				AREG &= MEM[(HREG << 8) | LREG];
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles+=2;
 			break;
 			
 			case 0xA7: // AND A
 				// A&A = A, no change
+				numCycles++;
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles++;
 			break;
 			
 			case 0xA8: // XOR B
+				numCycles++;
 				AREG ^= BREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xA9: // XOR C
+				numCycles++;
 				AREG ^= CREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xAA: // XOR D
+				numCycles++;
 				AREG ^= DREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xAB: // XOR E
+				numCycles++;
 				AREG ^= EREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xAC: // XOR H
+				numCycles++;
 				AREG ^= HREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xAD: // XOR L
+				numCycles++;
 				AREG ^= LREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xAE: // XOR (HL)
+				numCycles+=2;
 				AREG ^= MEM[(HREG << 8) | LREG];
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles+=2;
 			break;
 			
 			case 0xAF: // XOR A
 				// A^A = 0
+				numCycles++;
 				AREG = 0;
 				FREG = ZERO;
-				numCycles++;
 			break;
 			
 			case 0xB0: // OR B
+				numCycles++;
 				AREG |= BREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB1: // OR C
+				numCycles++;
 				AREG |= CREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB2: // OR D
+				numCycles++;
 				AREG |= DREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB3: // OR E
+				numCycles++;
 				AREG |= EREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB4: // OR H
+				numCycles++;
 				AREG |= HREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB5: // OR L
+				numCycles++;
 				AREG |= LREG;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB6: // OR (HL)
+				numCycles+=2;
 				AREG |= MEM[(HREG << 8) | LREG];
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles+=2;
 			break;
 			
 			case 0xB7: // OR A
 				// A|A = A, no change
+				numCycles++;
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles++;
 			break;
 			
 			case 0xB8: // CP B
-				FREG = FLAG_SUB[BREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[BREG][AREG];
 			break;
 			
 			case 0xB9: // CP C
-				FREG = FLAG_SUB[CREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[CREG][AREG];
 			break;
 			
 			case 0xBA: // CP D
-				FREG = FLAG_SUB[DREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[DREG][AREG];
 			break;
 			
 			case 0xBB: // CP E
-				FREG = FLAG_SUB[EREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[EREG][AREG];
 			break;
 			
 			case 0xBC: // CP H
-				FREG = FLAG_SUB[HREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[HREG][AREG];
 			break;
 			
 			case 0xBD: // CP L
-				FREG = FLAG_SUB[LREG][AREG];
 				numCycles++;
+				FREG = FLAG_SUB[LREG][AREG];
 			break;
 			
 			case 0xBE: // CP (HL)
-				FREG = FLAG_SUB[ MEM[(HREG << 8) | LREG] ][AREG];
 				numCycles+=2;
+				FREG = FLAG_SUB[ MEM[(HREG << 8) | LREG] ][AREG];
 			break;
 			
 			case 0xBF: // CP A
-				FREG = SUBTRACT | ZERO;
 				numCycles++;
+				FREG = SUBTRACT | ZERO;
 			break;
 			
 			case 0xC1: // POP C1
+				numCycles+=3;
 				BREG = MEM[SP++];
 				CREG = MEM[SP++];
-				numCycles+=3;
 			break;
 			
 			case 0xC5: //PUSH BC
+				numCycles+=4;
 				MEM[--SP] = CREG;
 				MEM[--SP] = BREG;
-				numCycles+=4;
 			break;
 			
 			case 0xC6: // ADD A,n
-				{int val = MEM[++PC];
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[++PC];
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG+val) & 0xFF;
+			break;
+			
+			case 0xCB: // 2-byte opcodes
+				switch (MEM[++PC])
+				{
+					case 0x30: // SWAP B
+						numCycles+=2;
+						val = BREG & 0x0F;
+						BREG >>= 4;
+						BREG |= (val << 4);
+						if (BREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x31: // SWAP C
+						numCycles+=2;
+						val = CREG & 0x0F;
+						CREG >>= 4;
+						CREG |= (val << 4);
+						if (CREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x32: // SWAP D
+						numCycles+=2;
+						val = DREG & 0x0F;
+						DREG >>= 4;
+						DREG |= (val << 4);
+						if (DREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x33: // SWAP E
+						numCycles+=2;
+						val = EREG & 0x0F;
+						EREG >>= 4;
+						EREG |= (val << 4);
+						if (EREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x34: // SWAP H
+						numCycles+=2;
+						val = HREG & 0x0F;
+						HREG >>= 4;
+						HREG |= (val << 4);
+						if (HREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x35: // SWAP L
+						numCycles+=2;
+						val = LREG & 0x0F;
+						LREG >>= 4;
+						LREG |= (val << 4);
+						if (LREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x36: // SWAP (HL)
+						numCycles+=4;
+						val = MEM[(HREG << 8) | LREG];
+						val >>= 4;
+						val |= ((MEM[(HREG << 8) | LREG] & 0x0F) << 4);
+						MEM[(HREG << 8) | LREG] = val;
+						if (val == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+					
+					case 0x37: // SWAP A
+						numCycles+=2;
+						val = AREG & 0x0F;
+						AREG >>= 4;
+						AREG |= (val << 4);
+						if (AREG == 0)
+							FREG = ZERO;
+						else
+							FREG = 0;
+					break;
+				}
 			break;
 			
 			case 0xCE: //ADC A,n
-				{int val = MEM[++PC] + ((FREG & CARRY) >> 4);	
-				FREG = FLAG_ADD[val][AREG];
-				AREG = (AREG+val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[++PC] + ((FREG & CARRY) >> 4);	
+				FREG = FLAG_ADD[val][AREG];
+				AREG = (AREG+val) & 0xFF;
 			break;
 			
 			case 0xD1: // POP DE
+				numCycles+=3;
 				DREG = MEM[SP++];
 				EREG = MEM[SP++];
-				numCycles+=3;
 			break;
 				
 			case 0xD5: //PUSH DE
+				numCycles+=4;
 				MEM[--SP] = EREG;
 				MEM[--SP] = DREG;
-				numCycles+=4;
 			break;
 			
 			case 0xD6: // SUB A,n
-				{int val = MEM[++PC];
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG-val) &  0xFF;}
 				numCycles+=2;
+				val = MEM[++PC];
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG-val) &  0xFF;
 			break;
 			
 			case 0xDE: // SBC A,n
-				{int val = MEM[++PC] + ((FREG & CARRY) >> 4);
-				FREG = FLAG_SUB[val][AREG];
-				AREG = (AREG - val) & 0xFF;}
 				numCycles+=2;
+				val = MEM[++PC] + ((FREG & CARRY) >> 4);
+				FREG = FLAG_SUB[val][AREG];
+				AREG = (AREG - val) & 0xFF;
 			break;
 			
 			case 0xE0: //LDH (n),A **WRITE TO ADDRESS N**
-				MEM[ 0xFF00 + MEM[++PC] ] = AREG;
 				numCycles+=3;
+				MEM[ 0xFF00 + MEM[++PC] ] = AREG;
 			break;
 			
 			case 0xE1: // POP HL
+				numCycles+=3;
 				HREG = MEM[SP++];
 				LREG = MEM[SP++];
-				numCycles+=3;
 			break;
 				
 			case 0xE2: //LD (C),A **WRITE TO IO C**
-				MEM[ 0xFF00 + CREG ] = AREG;
 				numCycles+=2;
+				MEM[ 0xFF00 + CREG ] = AREG;
 			break;
 			
 			case 0xE5: // PUSH HL
+				numCycles+=4;
 				MEM[--SP] = LREG;
 				MEM[--SP] = HREG;
-				numCycles+=4;
 			break;
 			
 			case 0xE6: // AND n
+				numCycles+=2;
 				AREG &= MEM[++PC];
 				if (AREG == 0)
 					FREG = ZERO | HALF_CARRY;
 				else
 					FREG = HALF_CARRY;
-				numCycles+=2;
+			break;
+			
+			case 0xE8: //ADD SP,n **ignores half-carry**
+				numCycles+=4;
+				offset = (byte) MEM[++PC]; // signed immediate
+				SP += offset;
+				if (SP > 0xFFFF)
+				{
+					SP &= 0xFFFF;
+					FREG = CARRY;
+				}
+				else
+					FREG = 0;
 			break;
 			
 			case 0xEA: //LD (nn),A
-				MEM[ MEM[++PC] | (MEM[++PC] << 8) ] = AREG;
 				numCycles+=4;
+				MEM[ MEM[++PC] | (MEM[++PC] << 8) ] = AREG;
 			break;
 			
 			case 0xEE: // XOR n
+				numCycles+=2;
 				AREG ^= MEM[++PC];
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles+=2;
 			break;
 			
 			case 0xF0: //LDH (n),A **READ FROM ADDRESS N**
-				AREG = MEM[ 0xFF00 + MEM[++PC] ];
 				numCycles+=3;
+				AREG = MEM[ 0xFF00 + MEM[++PC] ];
 			break;
 			
 			case 0xF1: // POP AF
+				numCycles+=3;
 				AREG = MEM[SP++];
 				FREG = MEM[SP++];
-				numCycles+=3;
 			break;
 			
 			case 0xF2: //LD A,(C) **READ FROM IO C**
-				AREG = MEM[ 0xFF00 + CREG ];
 				numCycles += 2;
+				AREG = MEM[ 0xFF00 + CREG ];
 			break;
 			
 			case 0xF5: // PUSH AF
+				numCycles+=4;
 				MEM[--SP] = FREG;
 				MEM[--SP] = AREG;
-				numCycles+=4;
 			break;
 			
 			case 0xF6: // OR n
+				numCycles+=2;
 				AREG |= MEM[++PC];
 				if (AREG == 0)
 					FREG = ZERO;
 				else
 					FREG = 0;
-				numCycles+=2;
 			break;
 			
 			case 0xF8: //LDHL SP,n **ignores half-carry**
-				byte offset = (byte) MEM[++PC]; // signed immediate
-				
-				int val = SP+offset;
+				numCycles+=3;
+				offset = (byte) MEM[++PC]; // signed immediate
+				val = SP+offset;
 				if (val > 0xFFFF)
 				{
 					val &= 0xFFFF;
@@ -1233,25 +1466,23 @@ public class CPU
 				}
 				else
 					FREG = 0;
-				
 				HREG = (val >> 8);
 				LREG = (val & 0x00FF);
-				numCycles+=3;
 			break;
 			
 			case 0xF9: //LD SP,HL
-				SP = ( (HREG << 8 ) | LREG );
 				numCycles+=2;
+				SP = ( (HREG << 8 ) | LREG );
 			break;
 			 
 			case 0xFA: //LD A,(nn)
-				AREG = MEM[ MEM[++PC] | (MEM[++PC] << 8) ];
 				numCycles+=4;
+				AREG = MEM[ MEM[++PC] | (MEM[++PC] << 8) ];
 			break;
 			
 			case 0xFE: // CP n
-				FREG = FLAG_SUB[ MEM[++PC] ][AREG];
 				numCycles+=2;
+				FREG = FLAG_SUB[ MEM[++PC] ][AREG];
 			break;
 			
 			default:
