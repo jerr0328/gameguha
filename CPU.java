@@ -1,5 +1,8 @@
 public class CPU
 {
+	/*Start Vals
+	  PC=$100  AF=$01B0 BC=$0013, 
+	  DE=$00D8 HL=$014D SP=$FFFE.*/
 	private static int AREG;
 	private static int FREG;
 	private static int BREG;
