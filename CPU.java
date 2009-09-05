@@ -1,16 +1,13 @@
 public class CPU
 {
-	/*Start Vals
-	  PC=$100  AF=$01B0 BC=$0013, 
-	  DE=$00D8 HL=$014D SP=$FFFE.*/
-	private static int AREG;
-	private static int FREG;
-	private static int BREG;
-	private static int CREG;
-	private static int DREG;
-	private static int EREG;
-	private static int HREG;
-	private static int LREG;
+	private static int AREG=0x01;
+	private static int FREG=0xB0;
+	private static int BREG=0x00;
+	private static int CREG=0x13;
+	private static int DREG=0x00;
+	private static int EREG=0xD8;
+	private static int HREG=0x01;
+	private static int LREG=0x4D;
 	private static int SP=0xFFFE; // GameBoy inits to 0xFFFE
 	private static int PC=0x0100; // will be 0x0100 by ROM
 	private static boolean IME = true;
@@ -24,6 +21,15 @@ public class CPU
 	private static final int SUBTRACT   = 0x40;
 	private static final int HALF_CARRY = 0x20;
 	private static final int CARRY      = 0x10;
+	
+	private static final int BIT7 = 0x80;
+	private static final int BIT6 = 0x40;
+	private static final int BIT5 = 0x20;
+	private static final int BIT4 = 0x10;
+	private static final int BIT3 = 0x08;
+	private static final int BIT2 = 0x04;
+	private static final int BIT1 = 0x02;
+	private static final int BIT0 = 0x01;
 	
 	private static int numCycles = 0;
 	
@@ -97,6 +103,7 @@ public class CPU
 	public static int execute(int opcode)
 	{
 		int val;
+		int index;
 		byte offset;
 		
 		switch(opcode)
@@ -143,11 +150,17 @@ public class CPU
 				BREG = MEM[++PC];
 			break;
 			
+			case 0x07: // RLCA
+				numCycles++;
+				FREG = (AREG & BIT7) >> 3;
+				AREG = ((AREG << 1) | (AREG >> 7)) & 0xFF;
+			break;
+			
 			case 0x08: //LD (nn),SP
 				numCycles+=5;
-				val = ( MEM[++PC] << 8 ) | MEM[++PC];
-				MEM[val] = SP >> 8;
-				MEM[val+1] = SP & 0x00FF;
+				index = ( MEM[++PC] << 8 ) | MEM[++PC];
+				MEM[index] = SP >> 8;
+				MEM[index+1] = SP & 0x00FF;
 			break;
 			
 			case 0x09: // ADD HL,BC
@@ -168,7 +181,7 @@ public class CPU
 				AREG = MEM[ ( BREG << 8) | CREG ];
 			break;
 			
-			case 0x0B: // DEC BC
+ 			case 0x0B: // DEC BC
 				numCycles+=2;
 				CREG--;
 				if (CREG < 0)
@@ -195,9 +208,15 @@ public class CPU
 				CREG=MEM[++PC];
 			break;
 			
+			case 0x0F: // RRCA
+				numCycles++;
+				FREG = (AREG & BIT0) << 4;
+				AREG = ((AREG >> 1) | (AREG << 7)) & 0xFF;
+			break;
+			
 			case 0x10: // STOP
 				numCycles++;
-				++PC; // consume next byte (assume 0x00)
+				//++PC? (not all assemblers insert 0x00)
 				// *TODO: give control to key listener*
 			break;
 			
@@ -237,6 +256,13 @@ public class CPU
 			case 0x16: //LD D,n
 				numCycles+=2;
 				DREG=MEM[++PC];
+			break;
+			
+			case 0x17: // RLA
+				numCycles++;
+				val = (FREG & CARRY) >> 4;
+				FREG = (AREG & BIT7) >> 3;
+				AREG = ((AREG << 1) | val) & 0xFF;
 			break;
 			
 			case 0x19: // ADD HL,DE
@@ -284,6 +310,13 @@ public class CPU
 				EREG=MEM[++PC];
 			break;
 			
+			case 0x1F: // RRA
+				numCycles++;
+				val = (FREG & CARRY) << 3;
+				FREG = (AREG & BIT0) << 4;
+				AREG = (AREG >> 1) | val;
+			break;
+			
 			case 0x21: //LD HL,nn
 				numCycles+=3;
 				HREG = MEM[++PC];
@@ -292,11 +325,11 @@ public class CPU
 			
 			case 0x22: //LDI (HL),A
 				numCycles+=2;
-				val = (HREG << 8) | LREG;
-				MEM[val] = AREG;
-				val = (val+1) & 0xFFFF;
-				HREG = val >> 8;
-				LREG = val & 0x00FF;
+				index = (HREG << 8) | LREG;
+				MEM[index] = AREG;
+				index = (index+1) & 0xFFFF;
+				HREG = index >> 8;
+				LREG = index & 0x00FF;
 			break;
 			
 			case 0x23: // INC HL
@@ -375,11 +408,11 @@ public class CPU
 			
 			case 0x2A: //LDI A,(HL)
 				numCycles+=2;
-				val = (HREG << 8) | LREG;
-				AREG = MEM[val];
-				val = (val+1) & 0xFFFF;
-				HREG = val >> 8;
-				LREG = val & 0x00FF;
+				index = (HREG << 8) | LREG;
+				AREG = MEM[index];
+				index = (index+1) & 0xFFFF;
+				HREG = index >> 8;
+				LREG = index & 0x00FF;
 			break;
 			
 			case 0x2B: // DEC HL
@@ -422,11 +455,11 @@ public class CPU
 			
 			case 0x32: //LDD (HL),A
 				numCycles+=2;
-				val = (HREG << 8) | LREG;
-				MEM[val] = AREG;
-				val = (val-1) & 0xFFFF;
-				HREG = val >> 8;
-				LREG = val & 0x00FF;
+				index = (HREG << 8) | LREG;
+				MEM[index] = AREG;
+				index = (index-1) & 0xFFFF;
+				HREG = index >> 8;
+				LREG = index & 0x00FF;
 			break;
 			
 			case 0x33: // INC SP
@@ -436,16 +469,16 @@ public class CPU
 			
 			case 0x34: // INC (HL)
 				numCycles+=3;
-				val = (HREG << 8) | LREG;
-				FREG = FLAG_INC[MEM[val]] | (FREG & CARRY);
-				MEM[val] = (MEM[val] + 1) & 0xFF;
+				index = (HREG << 8) | LREG;
+				FREG = FLAG_INC[MEM[index]] | (FREG & CARRY);
+				MEM[index] = (MEM[index] + 1) & 0xFF;
 			break;
 			
 			case 0x35: // DEC (HL)
 				numCycles+=3;
-				val = (HREG << 8) | LREG;
-				FREG = FLAG_DEC[MEM[val]] | (FREG & CARRY);
-				MEM[val] = (MEM[val] - 1) & 0xFF;
+				index = (HREG << 8) | LREG;
+				FREG = FLAG_DEC[MEM[index]] | (FREG & CARRY);
+				MEM[index] = (MEM[index] - 1) & 0xFF;
 			break;
 			
 			case 0x36: //LD (HL),n
@@ -474,11 +507,11 @@ public class CPU
 				
 			case 0x3A: //LDD A,(HL)
 				numCycles+=2;
-				val = (HREG << 8) | LREG;
-				AREG = MEM[val];
-				val = (val-1) & 0xFFFF;
-				HREG = val >> 8;
-				LREG = val & 0x00FF;
+				index = (HREG << 8) | LREG;
+				AREG = MEM[index];
+				index = (index-1) & 0xFFFF;
+				HREG = index >> 8;
+				LREG = index & 0x00FF;
 			break;
 			
 			case 0x3B: // DEC SP
@@ -1312,6 +1345,280 @@ public class CPU
 			case 0xCB: // 2-byte opcodes
 				switch (MEM[++PC])
 				{
+					case 0x00: // RLC B
+						numCycles+=2;
+						FREG = (BREG & BIT7) >> 3;
+						BREG = ((BREG << 1) | (BREG >> 7)) & 0xFF;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x01: // RLC C
+						numCycles+=2;
+						FREG = (CREG & BIT7) >> 3;
+						CREG = ((CREG << 1) | (CREG >> 7)) & 0xFF;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x02: // RLC D
+						numCycles+=2;
+						DREG = (DREG & BIT7) >> 3;
+						DREG = ((DREG << 1) | (DREG >> 7)) & 0xFF;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x03: // RLC E
+						numCycles+=2;
+						FREG = (EREG & BIT7) >> 3;
+						EREG = ((EREG << 1) | (EREG >> 7)) & 0xFF;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x04: // RLC H
+						numCycles+=2;
+						FREG = (HREG & BIT7) >> 3;
+						HREG = ((HREG << 1) | (HREG >> 7)) & 0xFF;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x05: // RLC L
+						numCycles+=2;
+						LREG = (LREG & BIT7) >> 3;
+						LREG = ((LREG << 1) | (LREG >> 7)) & 0xFF;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x06: // RLC (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						val = MEM[index];
+						FREG = (val & BIT7) >> 3;
+						if ((MEM[index] = (((val << 1) | (val >> 7)) & 0xFF)) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x07: // RLC A
+						numCycles+=2;
+						FREG = (AREG & BIT7) >> 3;
+						AREG = ((AREG << 1) | (AREG >> 7)) & 0xFF;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x08: // RRC B
+						numCycles+=2;
+						FREG = (BREG & BIT0) << 4;
+						BREG = ((BREG >> 1) | (BREG << 7)) & 0xFF;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x09: // RRC C
+						numCycles+=2;
+						FREG = (CREG & BIT0) << 4;
+						CREG = ((CREG >> 1) | (CREG << 7)) & 0xFF;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0A: // RRC D
+						numCycles+=2;
+						FREG = (DREG & BIT0) << 4;
+						DREG = ((DREG >> 1) | (DREG << 7)) & 0xFF;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0B: // RRC E
+						numCycles+=2;
+						FREG = (EREG & BIT0) << 4;
+						EREG = ((EREG >> 1) | (EREG << 7)) & 0xFF;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0C: // RRC H
+						numCycles+=2;
+						FREG = (HREG & BIT0) << 4;
+						HREG = ((HREG >> 1) | (HREG << 7)) & 0xFF;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0D: // RRC L
+						numCycles+=2;
+						FREG = (LREG & BIT0) << 4;
+						LREG = ((LREG >> 1) | (LREG << 7)) & 0xFF;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0E: // RRC (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						val = MEM[index];
+						FREG = (val & BIT0) << 4;
+						if ((MEM[index] = (((val >> 1) | (val << 7)) & 0xFF)) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x0F: // RRC A
+						numCycles+=2;
+						FREG = (AREG & BIT0) << 4;
+						AREG = ((AREG >> 1) | (AREG << 7)) & 0xFF;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x10: // RL B
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (BREG & BIT7) >> 3;
+						BREG = ((BREG << 1) | val) & 0xFF;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x11: // RL C
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (CREG & BIT7) >> 3;
+						CREG = ((CREG << 1) | val) & 0xFF;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x12: // RL D
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (DREG & BIT7) >> 3;
+						DREG = ((DREG << 1) | val) & 0xFF;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x13: // RL E
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (EREG & BIT7) >> 3;
+						EREG = ((EREG << 1) | val) & 0xFF;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x14: // RL H
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (HREG & BIT7) >> 3;
+						HREG = ((HREG << 1) | val) & 0xFF;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x15: // RL L
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (LREG & BIT7) >> 3;
+						LREG = ((LREG << 1) | val) & 0xFF;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x16: // RL (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						val = (FREG & CARRY) >> 4;
+						FREG = (MEM[index] & BIT7) >> 3;
+						if ((MEM[index] = ((MEM[index] << 1) | val) & 0xFF) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x17: // RL A
+						numCycles+=2;
+						val = (FREG & CARRY) >> 4;
+						FREG = (AREG & BIT7) >> 3;
+						AREG = ((AREG << 1) | val) & 0xFF;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x18: // RR B
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (BREG & BIT0) << 4;
+						BREG = (BREG >> 1) | val;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x19: // RR C
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (CREG & BIT0) << 4;
+						CREG = (CREG >> 1) | val;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1A: // RR D
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (DREG & BIT0) << 4;
+						DREG = (DREG >> 1) | val;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1B: // RR E
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (EREG & BIT0) << 4;
+						EREG = (EREG >> 1) | val;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1C: // RR H
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (HREG & BIT0) << 4;
+						HREG = (HREG >> 1) | val;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1D: // RR L
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (LREG & BIT0) << 4;
+						LREG = (LREG >> 1) | val;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1E: // RR (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						val = (FREG & CARRY) << 3;
+						FREG = (MEM[index] & BIT0) << 4;
+						if ((MEM[index] = (MEM[index] >> 1) | val) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x1F: // RR A
+						numCycles+=2;
+						val = (FREG & CARRY) << 3;
+						FREG = (AREG & BIT0) << 4;
+						AREG = (AREG >> 1) | val;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
 					case 0x30: // SWAP B
 						numCycles+=2;
 						val = BREG & 0x0F;
@@ -1380,10 +1687,11 @@ public class CPU
 					
 					case 0x36: // SWAP (HL)
 						numCycles+=4;
-						val = MEM[(HREG << 8) | LREG];
+						index = (HREG << 8) | LREG;
+						val = MEM[index];
 						val >>= 4;
-						val |= ((MEM[(HREG << 8) | LREG] & 0x0F) << 4);
-						MEM[(HREG << 8) | LREG] = val;
+						val |= ((MEM[index] & 0x0F) << 4);
+						MEM[index] = val;
 						if (val == 0)
 							FREG = ZERO;
 						else
