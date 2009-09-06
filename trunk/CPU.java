@@ -8,8 +8,8 @@ public class CPU
 	private static int EREG=0xD8;
 	private static int HREG=0x01;
 	private static int LREG=0x4D;
-	private static int SP=0xFFFE; // GameBoy inits to 0xFFFE
-	private static int PC=0x0100; // will be 0x0100 by ROM
+	private static int SP=0xFFFE;
+	private static int PC=0x0100;
 	private static boolean IME = true;
 	private static int[] MEM = new int[0x10000]; // (== 0xFFFF+1 == 1<<16)
 	private static int[][] FLAG_ADD;
@@ -22,14 +22,14 @@ public class CPU
 	private static final int HALF_CARRY = 0x20;
 	private static final int CARRY      = 0x10;
 	
-	private static final int BIT7 = 0x80;
-	private static final int BIT6 = 0x40;
-	private static final int BIT5 = 0x20;
-	private static final int BIT4 = 0x10;
-	private static final int BIT3 = 0x08;
-	private static final int BIT2 = 0x04;
-	private static final int BIT1 = 0x02;
-	private static final int BIT0 = 0x01;
+	private static final int BIT7 = 1<<7;
+	private static final int BIT6 = 1<<6;
+	private static final int BIT5 = 1<<5;
+	private static final int BIT4 = 1<<4;
+	private static final int BIT3 = 1<<3;
+	private static final int BIT2 = 1<<2;
+	private static final int BIT1 = 1<<1;
+	private static final int BIT0 = 1<<0;
 	
 	private static int numCycles = 0;
 	
@@ -1619,6 +1619,135 @@ public class CPU
 							FREG |= ZERO;
 					break;
 					
+					case 0x20: // SLA B
+						numCycles+=2;
+						FREG = (BREG & BIT7) >> 3;
+						BREG = (BREG << 1) & 0xFF;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x21: // SLA C
+						numCycles+=2;
+						FREG = (CREG & BIT7) >> 3;
+						CREG = (CREG << 1) & 0xFF;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x22: // SLA D
+						numCycles+=2;
+						FREG = (DREG & BIT7) >> 3;
+						DREG = (DREG << 1) & 0xFF;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x23: // SLA E
+						numCycles+=2;
+						FREG = (EREG & BIT7) >> 3;
+						EREG = (EREG << 1) & 0xFF;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x24: // SLA H
+						numCycles+=2;
+						FREG = (HREG & BIT7) >> 3;
+						HREG = (HREG << 1) & 0xFF;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x25: // SLA L
+						numCycles+=2;
+						FREG = (LREG & BIT7) >> 3;
+						LREG = (LREG << 1) & 0xFF;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x26: // SLA (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						FREG = (MEM[index] & BIT7) >> 3;
+						if ((MEM[index] = (MEM[index] << 1) & 0xFF) == 0)
+							FREG |= 0;
+					break;
+					
+					case 0x27: // SLA A
+						numCycles+=2;
+						FREG = (AREG & BIT7) >> 3;
+						AREG = (AREG << 1) & 0xFF;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x28: // SRA B
+						numCycles+=2;
+						FREG = (BREG & BIT0) << 4;
+						BREG = (BREG & BIT7) | (BREG >> 1);
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x29: // SRA C
+						numCycles+=2;
+						FREG = (CREG & BIT0) << 4;
+						CREG = (CREG & BIT7) | (CREG >> 1);
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2A: // SRA D
+						numCycles+=2;
+						FREG = (DREG & BIT0) << 4;
+						DREG = (DREG & BIT7) | (DREG >> 1);
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2B: // SRA E
+						numCycles+=2;
+						FREG = (EREG & BIT0) << 4;
+						EREG = (EREG & BIT7) | (EREG >> 1);
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2C: // SRA H
+						numCycles+=2;
+						FREG = (HREG & BIT0) << 4;
+						HREG = (HREG & BIT7) | (HREG >> 1);
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2D: // SRA L
+						numCycles+=2;
+						FREG = (LREG & BIT0) << 4;
+						LREG = (LREG & BIT7) | (LREG >> 1);
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2E: // SRA (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						val = MEM[index];
+						FREG = (val & BIT0) << 4;
+						if ((MEM[index] = (val & BIT7) | (val >> 1)) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x2F: // SRA A
+						numCycles+=2;
+						FREG = (AREG & BIT0) << 4;
+						AREG = (AREG & BIT7) | (AREG >> 1);
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
 					case 0x30: // SWAP B
 						numCycles+=2;
 						val = BREG & 0x0F;
@@ -1708,6 +1837,1032 @@ public class CPU
 						else
 							FREG = 0;
 					break;
+					
+					case 0x38: // SRL B
+						numCycles+=2;
+						FREG = (BREG & BIT0) << 4;
+						BREG >>= 1;
+						if (BREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x39: // SRL C
+						numCycles+=2;
+						FREG = (CREG & BIT0) << 4;
+						CREG >>= 1;
+						if (CREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3A: // SRL D
+						numCycles+=2;
+						FREG = (DREG & BIT0) << 4;
+						DREG >>= 1;
+						if (DREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3B: // SRL E
+						numCycles+=2;
+						FREG = (EREG & BIT0) << 4;
+						EREG >>= 1;
+						if (EREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3C: // SRL H
+						numCycles+=2;
+						FREG = (HREG & BIT0) << 4;
+						HREG >>= 1;
+						if (HREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3D: // SRL L
+						numCycles+=2;
+						FREG = (LREG & BIT0) << 4;
+						LREG >>= 1;
+						if (LREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3E: // SRL (HL)
+						numCycles+=4;
+						index = (HREG << 8) | LREG;
+						FREG = (MEM[index] & BIT0) << 4;
+						if ((MEM[index] >>= 1) == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x3F: // SRL A
+						numCycles+=2;
+						FREG = (AREG & BIT0) << 4;
+						AREG >>= 1;
+						if (AREG == 0)
+							FREG |= ZERO;
+					break;
+					
+					case 0x40: // BIT 0,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT0) << 7);
+					break;
+					
+					case 0x41: // BIT 0,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT0) << 7);
+					break;
+					
+					case 0x42: // BIT 0,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT0) << 7);
+					break;
+					
+					case 0x43: // BIT 0,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT0) << 7);
+					break;
+					
+					case 0x44: // BIT 0,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT0) << 7);
+					break;
+					
+					case 0x45: // BIT 0,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT0) << 7);
+					break;
+					
+					case 0x46: // BIT 0,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT0) << 7);
+					break;
+					
+					case 0x47: // BIT 0,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT0) << 7);
+					break;
+					
+					case 0x48: // BIT 1,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT1) << 6);
+					break;
+					
+					case 0x49: // BIT 1,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT1) << 6);
+					break;
+					
+					case 0x4A: // BIT 1,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT1) << 6);
+					break;
+					
+					case 0x4B: // BIT 1,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT1) << 6);
+					break;
+					
+					case 0x4C: // BIT 1,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT1) << 6);
+					break;
+					
+					case 0x4D: // BIT 1,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT1) << 6);
+					break;
+					
+					case 0x4E: // BIT 1,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT1) << 6);
+					break;
+					
+					case 0x4F: // BIT 1,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT1) << 6);
+					break;
+					
+					case 0x50: // BIT 2,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT2) << 5);
+					break;
+					
+					case 0x51: // BIT 2,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT2) << 5);
+					break;
+					
+					case 0x52: // BIT 2,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT2) << 5);
+					break;
+					
+					case 0x53: // BIT 2,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT2) << 5);
+					break;
+					
+					case 0x54: // BIT 2,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT2) << 5);
+					break;
+					
+					case 0x55: // BIT 2,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT2) << 5);
+					break;
+					
+					case 0x56: // BIT 2,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT2) << 5);
+					break;
+					
+					case 0x57: // BIT 2,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT2) << 5);
+					break;
+					
+					case 0x58: // BIT 3,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT3) << 4);
+					break;
+					
+					case 0x59: // BIT 3,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT3) << 4);
+					break;
+					
+					case 0x5A: // BIT 3,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT3) << 4);
+					break;
+					
+					case 0x5B: // BIT 3,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT3) << 4);
+					break;
+					
+					case 0x5C: // BIT 3,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT3) << 4);
+					break;
+					
+					case 0x5D: // BIT 3,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT3) << 4);
+					break;
+					
+					case 0x5E: // BIT 3,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT3) << 4);
+					break;
+					
+					case 0x5F: // BIT 3,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT3) << 4);
+					break;
+					
+					case 0x60: // BIT 4,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT4) << 3);
+					break;
+					
+					case 0x61: // BIT 4,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT4) << 3);
+					break;
+					
+					case 0x62: // BIT 4,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT4) << 3);
+					break;
+					
+					case 0x63: // BIT 4,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT4) << 3);
+					break;
+					
+					case 0x64: // BIT 4,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT4) << 3);
+					break;
+					
+					case 0x65: // BIT 4,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT4) << 3);
+					break;
+					
+					case 0x66: // BIT 4,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT4) << 3);
+					break;
+					
+					case 0x67: // BIT 4,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT4) << 3);
+					break;
+					
+					case 0x68: // BIT 5,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT5) << 2);
+					break;
+					
+					case 0x69: // BIT 5,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT5) << 2);
+					break;
+					
+					case 0x6A: // BIT 5,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT5) << 2);
+					break;
+					
+					case 0x6B: // BIT 5,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT5) << 2);
+					break;
+					
+					case 0x6C: // BIT 5,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT5) << 2);
+					break;
+					
+					case 0x6D: // BIT 5,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT5) << 2);
+					break;
+					
+					case 0x6E: // BIT 5,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT5) << 2);
+					break;
+					
+					case 0x6F: // BIT 5,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT5) << 2);
+					break;
+					
+					case 0x70: // BIT 6,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~BREG & BIT6) << 1);
+					break;
+					
+					case 0x71: // BIT 6,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~CREG & BIT6) << 1);
+					break;
+					
+					case 0x72: // BIT 6,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~DREG & BIT6) << 1);
+					break;
+					
+					case 0x73: // BIT 6,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~EREG & BIT6) << 1);
+					break;
+					
+					case 0x74: // BIT 6,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~HREG & BIT6) << 1);
+					break;
+					
+					case 0x75: // BIT 6,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~LREG & BIT6) << 1);
+					break;
+					
+					case 0x76: // BIT 6,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT6) << 1);
+					break;
+					
+					case 0x77: // BIT 6,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | ((~AREG & BIT6) << 1);
+					break;
+					
+					case 0x78: // BIT 7,B
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~BREG & BIT7);
+					break;
+					
+					case 0x79: // BIT 7,C
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~CREG & BIT7);
+					break;
+					
+					case 0x7A: // BIT 7,D
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~DREG & BIT7);
+					break;
+					
+					case 0x7B: // BIT 7,E
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~EREG & BIT7);
+					break;
+					
+					case 0x7C: // BIT 7,H
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~HREG & BIT7);
+					break;
+					
+					case 0x7D: // BIT 7,L
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~LREG & BIT7);
+					break;
+					
+					case 0x7E: // BIT 7,(HL)
+						numCycles+=4;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~MEM[(HREG << 8) | LREG] & BIT7);
+					break;
+					
+					case 0x7F: // BIT 7,A
+						numCycles+=2;
+						FREG = (FREG & CARRY) | HALF_CARRY | (~AREG & BIT7);
+					break;
+					
+					case 0x80: // RES 0,B
+						numCycles+=2;
+						BREG &= ~BIT0;
+					break;
+					
+					case 0x81: // RES 0,C
+						numCycles+=2;
+						CREG &= ~BIT0;
+					break;
+					
+					case 0x82: // RES 0,D
+						numCycles+=2;
+						DREG &= ~BIT0;
+					break;
+					
+					case 0x83: // RES 0,E
+						numCycles+=2;
+						EREG &= ~BIT0;
+					break;
+					
+					case 0x84: // RES 0,H
+						numCycles+=2;
+						HREG &= ~BIT0;
+					break;
+					
+					case 0x85: // RES 0,L
+						numCycles+=2;
+						LREG &= ~BIT0;
+					break;
+					
+					case 0x86: // RES 0,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT0;
+					break;
+					
+					case 0x87: // RES 0,A
+						numCycles+=2;
+						AREG &= ~BIT0;
+					break;
+					
+					case 0x88: // RES 1,B
+						numCycles+=2;
+						BREG &= ~BIT1;
+					break;
+					
+					case 0x89: // RES 1,C
+						numCycles+=2;
+						CREG &= ~BIT1;
+					break;
+					
+					case 0x8A: // RES 1,D
+						numCycles+=2;
+						DREG &= ~BIT1;
+					break;
+					
+					case 0x8B: // RES 1,E
+						numCycles+=2;
+						EREG &= ~BIT1;
+					break;
+					
+					case 0x8C: // RES 1,H
+						numCycles+=2;
+						HREG &= ~BIT1;
+					break;
+					
+					case 0x8D: // RES 1,L
+						numCycles+=2;
+						LREG &= ~BIT1;
+					break;
+					
+					case 0x8E: // RES 1,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT1;
+					break;
+					
+					case 0x8F: // RES 1,A
+						numCycles+=2;
+						AREG &= ~BIT1;
+					break;
+					
+					case 0x90: // RES 2,B
+						numCycles+=2;
+						BREG &= ~BIT2;
+					break;
+					
+					case 0x91: // RES 2,C
+						numCycles+=2;
+						CREG &= ~BIT2;
+					break;
+					
+					case 0x92: // RES 2,D
+						numCycles+=2;
+						DREG &= ~BIT2;
+					break;
+					
+					case 0x93: // RES 2,E
+						numCycles+=2;
+						EREG &= ~BIT2;
+					break;
+					
+					case 0x94: // RES 2,H
+						numCycles+=2;
+						HREG &= ~BIT2;
+					break;
+					
+					case 0x95: // RES 2,L
+						numCycles+=2;
+						LREG &= ~BIT2;
+					break;
+					
+					case 0x96: // RES 2,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT2;
+					break;
+					
+					case 0x97: // RES 2,A
+						numCycles+=2;
+						AREG &= ~BIT2;
+					break;
+					
+					case 0x98: // RES 3,B
+						numCycles+=2;
+						BREG &= ~BIT3;
+					break;
+					
+					case 0x99: // RES 3,C
+						numCycles+=2;
+						CREG &= ~BIT3;
+					break;
+					
+					case 0x9A: // RES 3,D
+						numCycles+=2;
+						DREG &= ~BIT3;
+					break;
+					
+					case 0x9B: // RES 3,E
+						numCycles+=2;
+						EREG &= ~BIT3;
+					break;
+					
+					case 0x9C: // RES 3,H
+						numCycles+=2;
+						HREG &= ~BIT3;
+					break;
+					
+					case 0x9D: // RES 3,L
+						numCycles+=2;
+						LREG &= ~BIT3;
+					break;
+					
+					case 0x9E: // RES 3,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT3;
+					break;
+					
+					case 0x9F: // RES 3,A
+						numCycles+=2;
+						AREG &= ~BIT3;
+					break;
+					
+					case 0xA0: // RES 4,B
+						numCycles+=2;
+						BREG &= ~BIT4;
+					break;
+					
+					case 0xA1: // RES 4,C
+						numCycles+=2;
+						CREG &= ~BIT4;
+					break;
+					
+					case 0xA2: // RES 4,D
+						numCycles+=2;
+						DREG &= ~BIT4;
+					break;
+					
+					case 0xA3: // RES 4,E
+						numCycles+=2;
+						EREG &= ~BIT4;
+					break;
+					
+					case 0xA4: // RES 4,H
+						numCycles+=2;
+						HREG &= ~BIT4;
+					break;
+					
+					case 0xA5: // RES 4,L
+						numCycles+=2;
+						LREG &= ~BIT4;
+					break;
+					
+					case 0xA6: // RES 4,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT4;
+					break;
+					
+					case 0xA7: // RES 4,A
+						numCycles+=2;
+						AREG &= ~BIT4;
+					break;
+					
+					case 0xA8: // RES 5,B
+						numCycles+=2;
+						BREG &= ~BIT5;
+					break;
+					
+					case 0xA9: // RES 5,C
+						numCycles+=2;
+						CREG &= ~BIT5;
+					break;
+					
+					case 0xAA: // RES 5,D
+						numCycles+=2;
+						DREG &= ~BIT5;
+					break;
+					
+					case 0xAB: // RES 5,E
+						numCycles+=2;
+						EREG &= ~BIT5;
+					break;
+					
+					case 0xAC: // RES 5,H
+						numCycles+=2;
+						HREG &= ~BIT5;
+					break;
+					
+					case 0xAD: // RES 5,L
+						numCycles+=2;
+						LREG &= ~BIT5;
+					break;
+					
+					case 0xAE: // RES 5,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT5;
+					break;
+					
+					case 0xAF: // RES 5,A
+						numCycles+=2;
+						AREG &= ~BIT5;
+					break;
+					
+					case 0xB0: // RES 6,B
+						numCycles+=2;
+						BREG &= ~BIT6;
+					break;
+					
+					case 0xB1: // RES 6,C
+						numCycles+=2;
+						CREG &= ~BIT6;
+					break;
+					
+					case 0xB2: // RES 6,D
+						numCycles+=2;
+						DREG &= ~BIT6;
+					break;
+					
+					case 0xB3: // RES 6,E
+						numCycles+=2;
+						EREG &= ~BIT6;
+					break;
+					
+					case 0xB4: // RES 6,H
+						numCycles+=2;
+						HREG &= ~BIT6;
+					break;
+					
+					case 0xB5: // RES 6,L
+						numCycles+=2;
+						LREG &= ~BIT6;
+					break;
+					
+					case 0xB6: // RES 6,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT6;
+					break;
+					
+					case 0xB7: // RES 6,A
+						numCycles+=2;
+						AREG &= ~BIT6;
+					break;
+					
+					case 0xB8: // RES 7,B
+						numCycles+=2;
+						BREG &= ~BIT7;
+					break;
+					
+					case 0xB9: // RES 7,C
+						numCycles+=2;
+						CREG &= ~BIT7;
+					break;
+					
+					case 0xBA: // RES 7,D
+						numCycles+=2;
+						DREG &= ~BIT7;
+					break;
+					
+					case 0xBB: // RES 7,E
+						numCycles+=2;
+						EREG &= ~BIT7;
+					break;
+					
+					case 0xBC: // RES 7,H
+						numCycles+=2;
+						HREG &= ~BIT7;
+					break;
+					
+					case 0xBD: // RES 7,L
+						numCycles+=2;
+						LREG &= ~BIT7;
+					break;
+					
+					case 0xBE: // RES 7,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] &= ~BIT7;
+					break;
+					
+					case 0xBF: // RES 7,A
+						numCycles+=2;
+						AREG &= ~BIT7;
+					break;
+					
+					case 0xC0: // SET 0,B
+						numCycles+=2;
+						BREG |= BIT0;
+					break;
+					
+					case 0xC1: // SET 0,C
+						numCycles+=2;
+						CREG |= BIT0;
+					break;
+					
+					case 0xC2: // SET 0,D
+						numCycles+=2;
+						DREG |= BIT0;
+					break;
+					
+					case 0xC3: // SET 0,E
+						numCycles+=2;
+						EREG |= BIT0;
+					break;
+					
+					case 0xC4: // SET 0,H
+						numCycles+=2;
+						HREG |= BIT0;
+					break;
+					
+					case 0xC5: // SET 0,L
+						numCycles+=2;
+						LREG |= BIT0;
+					break;
+					
+					case 0xC6: // SET 0,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT0;
+					break;
+					
+					case 0xC7: // SET 0,A
+						numCycles+=2;
+						AREG |= BIT0;
+					break;
+					
+					case 0xC8: // SET 1,B
+						numCycles+=2;
+						BREG |= BIT1;
+					break;
+					
+					case 0xC9: // SET 1,C
+						numCycles+=2;
+						CREG |= BIT1;
+					break;
+					
+					case 0xCA: // SET 1,D
+						numCycles+=2;
+						DREG |= BIT1;
+					break;
+					
+					case 0xCB: // SET 1,E
+						numCycles+=2;
+						EREG |= BIT1;
+					break;
+					
+					case 0xCC: // SET 1,H
+						numCycles+=2;
+						HREG |= BIT1;
+					break;
+					
+					case 0xCD: // SET 1,L
+						numCycles+=2;
+						LREG |= BIT1;
+					break;
+					
+					case 0xCE: // SET 1,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT1;
+					break;
+					
+					case 0xCF: // SET 1,A
+						numCycles+=2;
+						AREG |= BIT1;
+					break;
+					
+					case 0xD0: // SET 2,B
+						numCycles+=2;
+						BREG |= BIT2;
+					break;
+					
+					case 0xD1: // SET 2,C
+						numCycles+=2;
+						CREG |= BIT2;
+					break;
+					
+					case 0xD2: // SET 2,D
+						numCycles+=2;
+						DREG |= BIT2;
+					break;
+					
+					case 0xD3: // SET 2,E
+						numCycles+=2;
+						EREG |= BIT2;
+					break;
+					
+					case 0xD4: // SET 2,H
+						numCycles+=2;
+						HREG |= BIT2;
+					break;
+					
+					case 0xD5: // SET 2,L
+						numCycles+=2;
+						LREG |= BIT2;
+					break;
+					
+					case 0xD6: // SET 2,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT2;
+					break;
+					
+					case 0xD7: // SET 2,A
+						numCycles+=2;
+						AREG |= BIT2;
+					break;
+					
+					case 0xD8: // SET 3,B
+						numCycles+=2;
+						BREG |= BIT3;
+					break;
+					
+					case 0xD9: // SET 3,C
+						numCycles+=2;
+						CREG |= BIT3;
+					break;
+					
+					case 0xDA: // SET 3,D
+						numCycles+=2;
+						DREG |= BIT3;
+					break;
+					
+					case 0xDB: // SET 3,E
+						numCycles+=2;
+						EREG |= BIT3;
+					break;
+					
+					case 0xDC: // SET 3,H
+						numCycles+=2;
+						HREG |= BIT3;
+					break;
+					
+					case 0xDD: // SET 3,L
+						numCycles+=2;
+						LREG |= BIT3;
+					break;
+					
+					case 0xDE: // SET 3,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT3;
+					break;
+					
+					case 0xDF: // SET 3,A
+						numCycles+=2;
+						AREG |= BIT3;
+					break;
+					
+					case 0xE0: // SET 4,B
+						numCycles+=2;
+						BREG |= BIT4;
+					break;
+					
+					case 0xE1: // SET 4,C
+						numCycles+=2;
+						CREG |= BIT4;
+					break;
+					
+					case 0xE2: // SET 4,D
+						numCycles+=2;
+						DREG |= BIT4;
+					break;
+					
+					case 0xE3: // SET 4,E
+						numCycles+=2;
+						EREG |= BIT4;
+					break;
+					
+					case 0xE4: // SET 4,H
+						numCycles+=2;
+						HREG |= BIT4;
+					break;
+					
+					case 0xE5: // SET 4,L
+						numCycles+=2;
+						LREG |= BIT4;
+					break;
+					
+					case 0xE6: // SET 4,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT4;
+					break;
+					
+					case 0xE7: // SET 4,A
+						numCycles+=2;
+						AREG |= BIT4;
+					break;
+					
+					case 0xE8: // SET 5,B
+						numCycles+=2;
+						BREG |= BIT5;
+					break;
+					
+					case 0xE9: // SET 5,C
+						numCycles+=2;
+						CREG |= BIT5;
+					break;
+					
+					case 0xEA: // SET 5,D
+						numCycles+=2;
+						DREG |= BIT5;
+					break;
+					
+					case 0xEB: // SET 5,E
+						numCycles+=2;
+						EREG |= BIT5;
+					break;
+					
+					case 0xEC: // SET 5,H
+						numCycles+=2;
+						HREG |= BIT5;
+					break;
+					
+					case 0xED: // SET 5,L
+						numCycles+=2;
+						LREG |= BIT5;
+					break;
+					
+					case 0xEE: // SET 5,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT5;
+					break;
+					
+					case 0xEF: // SET 5,A
+						numCycles+=2;
+						AREG |= BIT5;
+					break;
+					
+					case 0xF0: // SET 6,B
+						numCycles+=2;
+						BREG |= BIT6;
+					break;
+					
+					case 0xF1: // SET 6,C
+						numCycles+=2;
+						CREG |= BIT6;
+					break;
+					
+					case 0xF2: // SET 6,D
+						numCycles+=2;
+						DREG |= BIT6;
+					break;
+					
+					case 0xF3: // SET 6,E
+						numCycles+=2;
+						EREG |= BIT6;
+					break;
+					
+					case 0xF4: // SET 6,H
+						numCycles+=2;
+						HREG |= BIT6;
+					break;
+					
+					case 0xF5: // SET 6,L
+						numCycles+=2;
+						LREG |= BIT6;
+					break;
+					
+					case 0xF6: // SET 6,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT6;
+					break;
+					
+					case 0xF7: // SET 6,A
+						numCycles+=2;
+						AREG |= BIT6;
+					break;
+					
+					case 0xF8: // SET 7,B
+						numCycles+=2;
+						BREG |= BIT7;
+					break;
+					
+					case 0xF9: // SET 7,C
+						numCycles+=2;
+						CREG |= BIT7;
+					break;
+					
+					case 0xFA: // SET 7,D
+						numCycles+=2;
+						DREG |= BIT7;
+					break;
+					
+					case 0xFB: // SET 7,E
+						numCycles+=2;
+						EREG |= BIT7;
+					break;
+					
+					case 0xFC: // SET 7,H
+						numCycles+=2;
+						HREG |= BIT7;
+					break;
+					
+					case 0xFD: // SET 7,L
+						numCycles+=2;
+						LREG |= BIT7;
+					break;
+					
+					case 0xFE: // SET 7,(HL)
+						numCycles+=4;
+						MEM[(HREG << 8) | LREG] |= BIT7;
+					break;
+					
+					case 0xFF: // SET 7,A
+						numCycles+=2;
+						AREG |= BIT7;
+					break;
+					
+					default: throw new AssertionError("Invalid byte following CB opcode");
 				}
 			break;
 			
