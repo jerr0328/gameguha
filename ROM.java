@@ -6,6 +6,7 @@ import java.io.*;
 
 public class ROM{
 	
+	private int selectedBank = 0; // Selected memory bank -implement function-
 	static final int bankSize = 0x4000;
 	public int banks[][];
 	
@@ -46,7 +47,12 @@ public class ROM{
 		catch(Exception e){ e.printStackTrace(); }
 		
 	}
-		
+	
+	public int getMem(int index)
+	{
+		return banks[selectedBank][index];
+	}
+	
 	// Returns true if the ROM is a Color GB
 	public boolean isCGB(){
 		if(banks[0][0x0143]==0){

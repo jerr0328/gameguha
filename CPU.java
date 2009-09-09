@@ -18,6 +18,13 @@ public class CPU implements Runnable
 	
 	private static final int CYCLES_PER_LINE = 114; // (1048576 Hz/ 9198 Hz)
 	
+	private ROM rom;
+	
+	public CPU(ROM rom)
+	{
+		this.rom = rom;
+	}
+	
 	private static void genFlagTable(int[][] FLAG_ADD, int[][] FLAG_SUB, int[] FLAG_INC, int[] FLAG_DEC)
 	{
 		int result, flag;
@@ -84,6 +91,9 @@ public class CPU implements Runnable
 		boolean IME = true;
 		int[] MEM = new int[0x10000]; // (16 bit addressing)
 		
+		for(int i=0;i<0x4000;i++)
+			MEM[i]=rom.getMem(i);
+			
 		int[][] FLAG_ADD = new int[257][256]; // max 255 + 1 (carry) = 256;
 		int[][] FLAG_SUB = new int[257][256];
 		int[] FLAG_INC = new int[256];
@@ -94,21 +104,19 @@ public class CPU implements Runnable
 		int val;
 		int index;
 		
-		try{
-			BufferedInputStream buf = new BufferedInputStream(new FileInputStream("../ROMS/tetris.gb"));
-			for(int i = 0; i < 0x8000; i++){
-				MEM[i]=buf.read();
-			}
-			buf.close();
-		}
-		
-		catch(Exception e){ e.printStackTrace(); }
+	
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
 		
 		for(;;) // loop until thread stops
 		{
+				
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
+				if(MEM[PC]!=0xCB)
+					System.out.format("Operation 0x%02X at %X\n",MEM[PC],PC);
+				else
+					System.out.format("Operation 0x%02X 0x%02X at %X\n",MEM[PC],MEM[PC+1],PC);
+						
 				switch(MEM[PC++])
 				{
 					case 0x00: //NOP
