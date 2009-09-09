@@ -9,4 +9,4 @@ Add any links that are helpful to this list
 
   * http://nocash.emubase.de/pandocs.htm
   * http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
-  * ...
+  * http://www.emulatronia.com/doctec/consolas/gameboy/gbspec.txt
