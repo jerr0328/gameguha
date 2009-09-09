@@ -1,3 +1,5 @@
+import java.io.*;
+
 public class CPU implements Runnable
 {
 	private static final int BIT7 = 1<<7;
@@ -92,7 +94,15 @@ public class CPU implements Runnable
 		int val;
 		int index;
 		
-		// **To-do: LOAD ROM HERE*
+		try{
+			BufferedInputStream buf = new BufferedInputStream(new FileInputStream("../ROMS/tetris.gb"));
+			for(int i = 0; i < 0x8000; i++){
+				MEM[i]=buf.read();
+			}
+			buf.close();
+		}
+		
+		catch(Exception e){ e.printStackTrace(); }
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
 		
 		for(;;) // loop until thread stops
