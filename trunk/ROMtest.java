@@ -12,7 +12,7 @@ public class ROMtest {
             System.out.println("No");
 		rom.verifyChecksum();
 	
-		Thread cpu = new Thread(new CPU());
+		Thread cpu = new Thread(new CPU(rom));
 		cpu.start();
 		
 		/* This should be in CPU sometime
