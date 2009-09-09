@@ -4,7 +4,6 @@ public class ROMtest {
         ROM rom = new ROM(args[0]);
         rom.printTitle();
         rom.printCartType();
-		rom.printROMSize();
 		rom.printRAMSize();
         System.out.print("Color: ");
         if(rom.isCGB())
@@ -12,7 +11,10 @@ public class ROMtest {
         else
             System.out.println("No");
 		rom.verifyChecksum();
-		CPU.genFlagTable();
+	
+		Thread cpu = new Thread(new CPU());
+		cpu.start();
+		
 		/* This should be in CPU sometime
 		for(int i=0x100;i<0x4000;i++)
 		{

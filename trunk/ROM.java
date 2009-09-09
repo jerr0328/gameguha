@@ -5,7 +5,9 @@
 import java.io.*;
 
 public class ROM{
-	// public int[] MEM = new int[0x10000]; 
+	
+	static final int bankSize = 0x4000;
+	public int banks[][];
 	
 	// String constructor (usually for testing)
 	public ROM(String filename){
@@ -18,37 +20,36 @@ public class ROM{
 	
 	// Loads the ROM into memory
 	private void load(File file){
+		int firstBank[] = new int[bankSize];
 		try{
 			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
-			for(int i = 0; i < 0x8000; i++){
-				// MEM[i]=buf.read();
-				CPU.writeMem(i, buf.read());
+			for(int i = 0; i < 0x4000; i++)
+			{
+				firstBank[i] = buf.read();
 			}
+		
+		int numBanks = printROMSize(firstBank);
+		banks = new int[numBanks][bankSize];
+		
+		for(int j = 1 ; j < numBanks; j++)
+			for(int i = 0; i < 0x4000; i++)
+			{
+				banks[j][i] = buf.read();
+			}
+		for(int i = 0; i < 0x4000; i++)
+		{
+			banks[0][i] = firstBank[i];
+		}
+			
 			buf.close();
 		}
 		catch(Exception e){ e.printStackTrace(); }
 		
 	}
-	/*
-	// For now, just returns get Memory from ROM at specified address
-	public int getMem(int index)
-	{
-		return MEM[index];
-	}
-	
-	// Dumps some data... use for debugging
-	public void dumpData(){
-		System.out.println("Dump:");
-		for(int i = 0; i < 0x10; i++){
-			System.out.print(Integer.toHexString(MEM[i])+" ");
-			if(i%16==0)
-				System.out.println();
-		}
-	}*/
-	
+		
 	// Returns true if the ROM is a Color GB
 	public boolean isCGB(){
-		if(CPU.getMem(0x0143)==0){
+		if(banks[0][0x0143]==0){
 			return false;
 		}
 		return true;
@@ -57,7 +58,7 @@ public class ROM{
 	// Prints cartridge type, as specified in docs
 	public void printCartType(){
 		String out="";
-		switch(CPU.getMem(0x0147)){
+		switch(banks[0][0x0147]){
 			case 0x0: out="0 ROM ONLY"; break;
 			case 0x1: out="1 ROM+MBC1"; break;
 			case 0x2: out="2 ROM+MBC1+RAM"; break;
@@ -85,28 +86,30 @@ public class ROM{
 		System.out.println("Cartridge type: "+out);
 	}
 	// Prints ROM size, as specified in docs
-	public void printROMSize(){
+	public int printROMSize(int bank[]){
 		String out="";
-		switch(CPU.getMem(0x148)){
-			case 0x0: out="32KB (no bank)"; break;
-			case 0x1: out="64KB (4 bank)"; break;
-			case 0x2: out="128KB (8 banks)"; break;
-			case 0x3: out="256KB (16 banks)"; break;
-			case 0x4: out="512KB (32 banks)"; break;
-			case 0x5: out="1MB (64 banks)"; break;
-			case 0x6: out="2MB (128 banks)"; break;
-			case 0x7: out="4MB (256 banks)"; break;
-			case 0x52: out="1.1MB (72 banks)"; break;
-			case 0x53: out="1.2MB (80 banks)"; break;
-			case 0x54: out="1.5MB (96 banks)"; break;
+		int numBanks=0;
+		switch(bank[0x148]){
+			case 0x0: out="32KB (no bank)"; numBanks = 1; break;
+			case 0x1: out="64KB (4 bank)"; numBanks = 4; break;
+			case 0x2: out="128KB (8 banks)"; numBanks = 8; break;
+			case 0x3: out="256KB (16 banks)"; numBanks = 16; break;
+			case 0x4: out="512KB (32 banks)"; numBanks = 32; break;
+			case 0x5: out="1MB (64 banks)"; numBanks = 64; break;
+			case 0x6: out="2MB (128 banks)"; numBanks = 128; break;
+			case 0x7: out="4MB (256 banks)"; numBanks = 256; break;
+			case 0x52: out="1.1MB (72 banks)"; numBanks = 72; break;
+			case 0x53: out="1.2MB (80 banks)"; numBanks = 80; break;
+			case 0x54: out="1.5MB (96 banks)"; numBanks = 96; break;
 			
 		}
 		System.out.println("ROM Size: "+out);
+		return numBanks;
 	}
 	
 	public void printRAMSize(){
 		String out="";
-		switch(CPU.getMem(0x149)){
+		switch(banks[0][0x149]){
 			case 0x0: out="no RAM"; break;
 			case 0x1: out="2KB RAM"; break;
 			case 0x2: out="8KB RAM"; break;
@@ -132,7 +135,7 @@ public class ROM{
 		int x=0;
 		
 		while (ptr <= 0x0133){
-			if(CPU.getMem(ptr)!=nintyBitmap[ptr-0x0104])
+			if(banks[0][ptr]!=nintyBitmap[ptr-0x0104])
 				{
 					System.out.println("Bitmap Invalid");
 					System.out.println("Header Checksum Invalid");
@@ -145,9 +148,9 @@ public class ROM{
 			//x=0:FOR i=0134h TO 014Ch:x=x-MEM[i]-1:NEXT
 	  		for(;ptr<=0x014C;ptr++)
 			{
-				x=x-CPU.getMem(ptr)-1; //checksum algorithm
+				x=x-banks[0][ptr]-1; //checksum algorithm
 			}
-			if((x&0xFF) == CPU.getMem(ptr)){
+			if((x&0xFF) == banks[0][ptr]){
 				System.out.println("Header Checksum Valid");
 				return true;
 			}
@@ -161,8 +164,8 @@ public class ROM{
 	public void printTitle(){
 		System.out.print("ROM Title: ");
 		int ptr=0x0134;
-		while(ptr < 0x0143 && CPU.getMem(ptr)!=0){
-			System.out.print((char)CPU.getMem(ptr));
+		while(ptr < 0x0143 && banks[0][ptr]!=0){
+			System.out.print((char)banks[0][ptr]);
 			ptr++;
 		}
 		System.out.println();
