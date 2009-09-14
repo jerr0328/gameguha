@@ -1,5 +1,3 @@
-import java.io.*;
-
 public class CPU implements Runnable
 {
 	private static final int BIT7 = 1<<7;
@@ -18,7 +16,20 @@ public class CPU implements Runnable
 	
 	private static final int CYCLES_PER_LINE = 114; // (1048576 Hz/ 9198 Hz)
 	
+	private int[] ROM;
+	private int[] ROMbank;
+	private int[] VRAM;
+	private int[] RAMbank;
+	private int[] RAM;
+	private int[] OAM;
+	private int[] IO;
+	private int[] HRAM;
+	private int IE;
+	
 	private ROM rom;
+	private int mbc = 0; // ROM only for now
+	private int numCycles = 0;
+	private int scanline = 0;
 	
 	public CPU(ROM rom)
 	{
@@ -76,6 +87,141 @@ public class CPU implements Runnable
 		}
 	}
 	
+	public int readMem(int index)
+	{
+		switch (index >> 8)
+		{
+			case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: 
+			case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F: 
+			case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17: 
+			case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F: 
+			case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27: 
+			case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F: 
+			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: 
+			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F: 
+				return ROM[index];
+			
+			case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x46: case 0x47: 
+			case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F: 
+			case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: case 0x57: 
+			case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5E: case 0x5F: 
+			case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67: 
+			case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F: 
+			case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x76: case 0x77: 
+			case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F: 
+				return ROMbank[index-0x4000];
+			
+			case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87: 
+			case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8E: case 0x8F: 
+			case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97: 
+			case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F: 
+				return VRAM[index-0x8000];
+			
+			case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: 
+			case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: 
+			case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: 
+			case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF: 
+				return RAMbank[index-0xA000];
+			
+			case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: 
+			case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF: 
+			case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: case 0xD7: 
+			case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF: 
+				return RAM[index-0xC000];
+			
+			case 0xFE:
+				return OAM[index-0xFE00];
+			
+			case 0xFF:
+				switch(index)
+				{
+					// Handle IO ports
+					default: return 0;
+				}
+					
+			default: // echo internal RAM if in range [E000, FDFF]
+				return RAM[index-0xE000];
+		}
+	}
+	
+	public int writeMem(int index, int val)
+	{
+		switch(mbc)
+		{
+			case 0:
+				switch (index >> 8)
+				{
+					case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87: 
+					case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8E: case 0x8F: 
+					case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97: 
+					case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F: 
+						return (VRAM[index-0x8000] = val);
+					
+					case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: 
+					case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: 
+					case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: 
+					case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF: 
+						return (RAMbank[index-0xA000] = val);
+					
+					case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: 
+					case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF: 
+					case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: case 0xD7: 
+					case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF: 
+						return (RAM[index-0xC000] = val);
+					
+					case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: 
+					case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF: 
+					case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7: 
+					case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: 
+						return (RAM[index-0xE000] = val); // echo internal RAM if in range [E000, FDFF]
+					
+					case 0xFE:
+						return (OAM[index-0xFE00] = val);
+					
+					case 0xFF:
+					switch(index)
+					{
+						// Handle IO ports
+						default: return 0;
+					}
+					
+					default:
+						return val; // cannot write to ROM
+				}
+			
+			case 1:
+				switch (index >> 8)
+				{
+					//...
+				}
+			break;
+			
+			case 2:
+				switch (index >> 8)
+				{
+					//...
+				}
+			break;
+			
+			case 3:
+				switch (index >> 8)
+				{
+					//...
+				}
+			break;
+			
+			case 5:
+				switch (index >> 8)
+				{
+					//...
+				}
+			break;
+			
+			default: throw new AssertionError("Invalid MBC type");
+		}
+		throw new AssertionError("writeMem() did not return a value");
+	}
+	
 	public void run()
 	{
 		int AREG=0x01;
@@ -89,21 +235,24 @@ public class CPU implements Runnable
 		int SP=0xFFFE;
 		int PC=0x0100;
 		boolean IME = true;
-		int[] MEM = new int[0x10000]; // (16 bit addressing)
 		
-		for(int i=0;i<0x4000;i++)
-			MEM[i]=rom.getMem(i);
+		ROM = rom.getDefaultROM();
+		ROMbank = rom.getROM(1);
+		VRAM = new int[0x2000];
+		RAMbank = rom.getRAM(0); // can be null
+		RAM = new int[0x2000];
+		OAM = new int[0x0100];
+		IO = new int[0x0080];
+		HRAM = new int[0x007F];
 			
 		int[][] FLAG_ADD = new int[257][256]; // max 255 + 1 (carry) = 256;
 		int[][] FLAG_SUB = new int[257][256];
 		int[] FLAG_INC = new int[256];
 		int[] FLAG_DEC = new int[256];
 		
-		int numCycles = 0;
-		int scanline = 0;
 		int val;
+		int memval;
 		int index;
-		
 	
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
 		
@@ -112,12 +261,12 @@ public class CPU implements Runnable
 				
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
-				if(MEM[PC]!=0xCB)
-					System.out.format("Operation 0x%02X at %X\n",MEM[PC],PC);
+				if(readMem(PC)!=0xCB)
+					System.out.format("Operation 0x%02X at %X\n",readMem(PC),PC);
 				else
-					System.out.format("Operation 0x%02X 0x%02X at %X\n",MEM[PC],MEM[PC+1],PC);
+					System.out.format("Operation 0x%02X 0x%02X at %X\n",readMem(PC),readMem(PC+1),PC);
 						
-				switch(MEM[PC++])
+				switch(readMem(PC++))
 				{
 					case 0x00: //NOP
 						numCycles++;
@@ -125,13 +274,13 @@ public class CPU implements Runnable
 					
 					case 0x01: //LD BC,nn
 						numCycles+=3;
-						BREG = MEM[PC++];
-						CREG = MEM[PC++];
+						BREG = readMem(PC++);
+						CREG = readMem(PC++);
 					break;
 					
 					case 0x02: //LD (BC),A
 						numCycles+=2;
-						MEM[ (BREG << 8) | CREG ] = AREG;
+						writeMem((BREG << 8) | CREG, AREG);
 					break;
 					
 					case 0x03: // INC BC
@@ -158,7 +307,7 @@ public class CPU implements Runnable
 					
 					case 0x06: //LD B,n
 						numCycles+=2;
-						BREG = MEM[PC++];
+						BREG = readMem(PC++);
 					break;
 					
 					case 0x07: // RLCA
@@ -169,9 +318,9 @@ public class CPU implements Runnable
 					
 					case 0x08: //LD (nn),SP
 						numCycles+=5;
-						index = ( MEM[PC++] << 8 ) | MEM[PC++];
-						MEM[index] = SP >> 8;
-						MEM[index+1] = SP & 0x00FF;
+						index = ( readMem(PC++) << 8 ) | readMem(PC++);
+						writeMem(index, SP >> 8);
+						writeMem(index+1, SP & 0x00FF);
 					break;
 					
 					case 0x09: // ADD HL,BC
@@ -189,7 +338,7 @@ public class CPU implements Runnable
 					
 					case 0x0A: //LD A,(BC)
 						numCycles+=2;
-						AREG = MEM[ ( BREG << 8) | CREG ];
+						AREG = readMem( (BREG << 8) | CREG );
 					break;
 					
 		 			case 0x0B: // DEC BC
@@ -216,7 +365,7 @@ public class CPU implements Runnable
 						
 					case 0x0E: //LD C,n
 						numCycles+=2;
-						CREG=MEM[PC++];
+						CREG=readMem(PC++);
 					break;
 					
 					case 0x0F: // RRCA
@@ -233,13 +382,13 @@ public class CPU implements Runnable
 					
 					case 0x11: //LD DE,nn
 						numCycles+=3;
-						DREG = MEM[PC++];
-						EREG = MEM[PC++];
+						DREG = readMem(PC++);
+						EREG = readMem(PC++);
 					break;
 					
 					case 0x12: //LD (DE),A
 						numCycles+=2;
-						MEM[ (DREG << 8) | EREG ] = AREG;
+						writeMem( (DREG << 8) | EREG, AREG);
 					break;
 					
 					case 0x13: // INC DE
@@ -266,7 +415,7 @@ public class CPU implements Runnable
 					
 					case 0x16: //LD D,n
 						numCycles+=2;
-						DREG=MEM[PC++];
+						DREG=readMem(PC++);
 					break;
 					
 					case 0x17: // RLA
@@ -278,7 +427,7 @@ public class CPU implements Runnable
 					
 					case 0x18: // JR n
 						numCycles+=3;
-						PC += (byte)MEM[PC++]; // signed immediate
+						PC += (byte)readMem(PC++); // signed immediate
 					break;
 					
 					case 0x19: // ADD HL,DE
@@ -296,7 +445,7 @@ public class CPU implements Runnable
 						
 					case 0x1A: //LD A,(DE)
 						numCycles+=2;
-						AREG = MEM[ ( DREG << 8 ) | EREG ];
+						AREG = readMem( ( DREG << 8 ) | EREG );
 					break;
 					
 					case 0x1B: // DEC DE
@@ -323,7 +472,7 @@ public class CPU implements Runnable
 				
 					case 0x1E: //LD E,n
 						numCycles+=2;
-						EREG=MEM[PC++];
+						EREG=readMem(PC++);
 					break;
 					
 					case 0x1F: // RRA
@@ -337,7 +486,7 @@ public class CPU implements Runnable
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=3;
-							PC += (byte)MEM[PC++]; // signed immediate
+							PC += (byte)readMem(PC++); // signed immediate
 						}
 						else
 						{
@@ -348,14 +497,14 @@ public class CPU implements Runnable
 					
 					case 0x21: //LD HL,nn
 						numCycles+=3;
-						HREG = MEM[PC++];
-						LREG = MEM[PC++];
+						HREG = readMem(PC++);
+						LREG = readMem(PC++);
 					break;
 					
 					case 0x22: //LDI (HL),A
 						numCycles+=2;
 						index = (HREG << 8) | LREG;
-						MEM[index] = AREG;
+						writeMem(index, AREG);
 						index = (index+1) & 0xFFFF;
 						HREG = index >> 8;
 						LREG = index & 0x00FF;
@@ -385,7 +534,7 @@ public class CPU implements Runnable
 					
 					case 0x26: //LD H,n
 						numCycles+=2;
-						HREG=MEM[PC++];
+						HREG=readMem(PC++);
 					break;
 					
 					case 0x27: // DAA
@@ -426,7 +575,7 @@ public class CPU implements Runnable
 						if ((FREG & ZERO) != 0)
 						{
 							numCycles+=3;
-							PC += (byte)MEM[PC++]; // signed immediate
+							PC += (byte)readMem(PC++); // signed immediate
 						}
 						else
 						{
@@ -451,7 +600,7 @@ public class CPU implements Runnable
 					case 0x2A: //LDI A,(HL)
 						numCycles+=2;
 						index = (HREG << 8) | LREG;
-						AREG = MEM[index];
+						AREG = readMem(index);
 						index = (index+1) & 0xFFFF;
 						HREG = index >> 8;
 						LREG = index & 0x00FF;
@@ -481,7 +630,7 @@ public class CPU implements Runnable
 					
 					case 0x2E: //LD L,n
 						numCycles+=2;
-						LREG=MEM[PC++];
+						LREG=readMem(PC++);
 					break;
 					
 					case 0x2F: // CPL
@@ -494,7 +643,7 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=3;
-							PC += (byte)MEM[PC++]; // signed immediate
+							PC += (byte)readMem(PC++); // signed immediate
 						}
 						else
 						{
@@ -505,13 +654,13 @@ public class CPU implements Runnable
 					
 					case 0x31: //LD SP,nn
 						numCycles+=3;
-						SP = ( ( MEM[PC++] << 8 ) | MEM[PC++] );
+						SP = ( ( readMem(PC++) << 8 ) | readMem(PC++) );
 					break;
 					
 					case 0x32: //LDD (HL),A
 						numCycles+=2;
 						index = (HREG << 8) | LREG;
-						MEM[index] = AREG;
+						writeMem(index, AREG);
 						index = (index-1) & 0xFFFF;
 						HREG = index >> 8;
 						LREG = index & 0x00FF;
@@ -525,20 +674,22 @@ public class CPU implements Runnable
 					case 0x34: // INC (HL)
 						numCycles+=3;
 						index = (HREG << 8) | LREG;
-						FREG = FLAG_INC[MEM[index]] | (FREG & CARRY);
-						MEM[index] = (MEM[index] + 1) & 0xFF;
+						memval = readMem(index);
+						FREG = FLAG_INC[memval] | (FREG & CARRY);
+						writeMem(index, (memval + 1) & 0xFF);
 					break;
 					
 					case 0x35: // DEC (HL)
 						numCycles+=3;
 						index = (HREG << 8) | LREG;
-						FREG = FLAG_DEC[MEM[index]] | (FREG & CARRY);
-						MEM[index] = (MEM[index] - 1) & 0xFF;
+						memval = readMem(index);
+						FREG = FLAG_DEC[memval] | (FREG & CARRY);
+						writeMem(index, (memval - 1) & 0xFF);
 					break;
 					
 					case 0x36: //LD (HL),n
 						numCycles+=3;
-						MEM[ ( HREG << 8) | LREG ] = MEM[PC++];
+						writeMem( (HREG << 8) | LREG, readMem(PC++));
 					break;
 					
 					case 0x37: // SCF
@@ -551,7 +702,7 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=3;
-							PC += (byte)MEM[PC++]; // signed immediate
+							PC += (byte)readMem(PC++); // signed immediate
 						}
 						else
 						{
@@ -576,7 +727,7 @@ public class CPU implements Runnable
 					case 0x3A: //LDD A,(HL)
 						numCycles+=2;
 						index = (HREG << 8) | LREG;
-						AREG = MEM[index];
+						AREG = readMem(index);
 						index = (index-1) & 0xFFFF;
 						HREG = index >> 8;
 						LREG = index & 0x00FF;
@@ -601,7 +752,7 @@ public class CPU implements Runnable
 					
 					case 0x3E: //LD A,n
 						numCycles+=2;
-						AREG = MEM[PC++];
+						AREG = readMem(PC++);
 					break;
 					
 					case 0x3F: // CCF
@@ -641,7 +792,7 @@ public class CPU implements Runnable
 					
 					case 0x46: //LD B,(HL)
 						numCycles+=2;
-						BREG=MEM[ ( HREG << 8) | LREG ];
+						BREG=readMem( ( HREG << 8) | LREG );
 					break;
 					
 					case 0x47: //LD B,A
@@ -680,7 +831,7 @@ public class CPU implements Runnable
 					
 					case 0x4E: //LD C,(HL)
 						numCycles+=2;
-						CREG=MEM[ ( HREG << 8) | LREG ];
+						CREG=readMem( ( HREG << 8) | LREG );
 					break;
 					
 					case 0x4F: //LD C,A
@@ -719,7 +870,7 @@ public class CPU implements Runnable
 					
 					case 0x56: //LD D,(HL)
 						numCycles+=2;
-						DREG=MEM[ ( HREG << 8) | LREG ];
+						DREG=readMem( ( HREG << 8) | LREG );
 					break;
 					
 					case 0x57: //LD D,A
@@ -758,7 +909,7 @@ public class CPU implements Runnable
 					
 					case 0x5E: //LD E,(HL)
 						numCycles+=2;
-						EREG=MEM[ ( HREG << 8) | LREG ];
+						EREG=readMem( (HREG << 8) | LREG );
 					break;
 					
 					case 0x5F: //LD E,A
@@ -797,7 +948,7 @@ public class CPU implements Runnable
 					
 					case 0x66: //LD H,(HL)
 						numCycles+=2;
-						HREG=MEM[ ( HREG << 8 ) | LREG ];
+						HREG=readMem( (HREG << 8 ) | LREG );
 					break;
 					
 					case 0x67: //LD H,A
@@ -836,7 +987,7 @@ public class CPU implements Runnable
 					
 					case 0x6E: //LD L,(HL)
 						numCycles+=2;
-						LREG=MEM[ ( HREG << 8 ) | LREG ];
+						LREG=readMem( (HREG << 8 ) | LREG );
 					break;
 					
 					case 0x6F: //LD L,A
@@ -846,32 +997,32 @@ public class CPU implements Runnable
 					
 					case 0x70: //LD (HL),B
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = BREG;
+						writeMem((HREG << 8) | LREG, BREG);
 					break;
 					
 					case 0x71: //LD (HL),C
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = CREG;
+						writeMem((HREG << 8) | LREG, CREG);
 					break;
 					
 					case 0x72: //LD (HL),D
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = DREG;
+						writeMem((HREG << 8) | LREG, DREG);
 					break;
 					
 					case 0x73: //LD (HL),E
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = EREG;
+						writeMem((HREG << 8) | LREG, EREG);
 					break;
 					
 					case 0x74: //LD (HL),H
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = HREG;
+						writeMem((HREG << 8) | LREG, HREG);
 					break;
 					
 					case 0x75: //LD (HL),L
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = LREG;
+						writeMem((HREG << 8) | LREG, LREG);
 					break;
 					
 					case 0x76: // HALT
@@ -884,7 +1035,7 @@ public class CPU implements Runnable
 				
 					case 0x77: // LD (HL),A
 						numCycles+=2;
-						MEM[ ( HREG << 8 ) | LREG ] = AREG;
+						writeMem((HREG << 8) | LREG, AREG);
 					break;
 					
 					case 0x78: //LD A,B
@@ -919,7 +1070,7 @@ public class CPU implements Runnable
 				
 					case 0x7E: //LD A,(HL)
 						numCycles+=2;
-						AREG=MEM[ ( HREG << 8 ) | LREG ];
+						AREG=readMem((HREG << 8) | LREG);
 					break;
 					
 					case 0x7F: //LD A,A
@@ -964,9 +1115,9 @@ public class CPU implements Runnable
 					
 					case 0x86: // ADD A,(HL)
 						numCycles+=2;
-						val = MEM[(HREG << 8) | LREG];
-						FREG = FLAG_ADD[val][AREG];
-						AREG = (AREG+val) & 0xFF;
+						memval = readMem((HREG << 8) | LREG);
+						FREG = FLAG_ADD[memval][AREG];
+						AREG = (AREG+memval) & 0xFF;
 					break;
 					
 					case 0x87: //ADD A,A
@@ -1019,9 +1170,9 @@ public class CPU implements Runnable
 					
 					case 0x8E: //ADC A,(HL)
 						numCycles+=2;
-						val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
-						FREG = FLAG_ADD[val][AREG];
-						AREG = (AREG+val) & 0xFF;
+						memval = readMem((HREG << 8) | LREG) + ((FREG & CARRY) >> 4);
+						FREG = FLAG_ADD[memval][AREG];
+						AREG = (AREG+memval) & 0xFF;
 					break;
 					
 					case 0x8F: //ADC A,A
@@ -1069,9 +1220,9 @@ public class CPU implements Runnable
 					
 					case 0x96: // SUB A,(HL)
 						numCycles+=2;
-						val = MEM[(HREG << 8) | LREG];
-						FREG = FLAG_SUB[val][AREG];
-						AREG = (AREG-val) &  0xFF;
+						memval = readMem((HREG << 8) | LREG);
+						FREG = FLAG_SUB[memval][AREG];
+						AREG = (AREG-memval) &  0xFF;
 					break;
 					
 					case 0x97: // SUB A,A
@@ -1125,9 +1276,9 @@ public class CPU implements Runnable
 					
 					case 0x9E: // SBC A,(HL)
 						numCycles+=2;
-						val = MEM[(HREG << 8) | LREG] + ((FREG & CARRY) >> 4);
-						FREG = FLAG_SUB[val][AREG];
-						AREG = (AREG - val) & 0xFF;
+						memval = readMem((HREG << 8) | LREG) + ((FREG & CARRY) >> 4);
+						FREG = FLAG_SUB[memval][AREG];
+						AREG = (AREG - memval) & 0xFF;
 					break;
 					
 					case 0x9F: // SBC A,A
@@ -1193,7 +1344,7 @@ public class CPU implements Runnable
 					
 					case 0xA6: // AND (HL)
 						numCycles+=2;
-						AREG &= MEM[(HREG << 8) | LREG];
+						AREG &= readMem((HREG << 8) | LREG);
 						if (AREG == 0)
 							FREG = ZERO | HALF_CARRY;
 						else
@@ -1265,7 +1416,7 @@ public class CPU implements Runnable
 					
 					case 0xAE: // XOR (HL)
 						numCycles+=2;
-						AREG ^= MEM[(HREG << 8) | LREG];
+						AREG ^= readMem((HREG << 8) | LREG);
 						if (AREG == 0)
 							FREG = ZERO;
 						else
@@ -1335,7 +1486,7 @@ public class CPU implements Runnable
 					
 					case 0xB6: // OR (HL)
 						numCycles+=2;
-						AREG |= MEM[(HREG << 8) | LREG];
+						AREG |= readMem((HREG << 8) | LREG);
 						if (AREG == 0)
 							FREG = ZERO;
 						else
@@ -1383,7 +1534,7 @@ public class CPU implements Runnable
 					
 					case 0xBE: // CP (HL)
 						numCycles+=2;
-						FREG = FLAG_SUB[ MEM[(HREG << 8) | LREG] ][AREG];
+						FREG = FLAG_SUB[ readMem((HREG << 8) | LREG) ][AREG];
 					break;
 					
 					case 0xBF: // CP A
@@ -1395,7 +1546,7 @@ public class CPU implements Runnable
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=5;
-							PC = MEM[SP++] | (MEM[SP++] << 8);
+							PC = readMem(SP++) | (readMem(SP++) << 8);
 						}
 						else
 							numCycles+=2;
@@ -1403,15 +1554,15 @@ public class CPU implements Runnable
 					
 					case 0xC1: // POP BC
 						numCycles+=3;
-						CREG = MEM[SP++];
-						BREG = MEM[SP++];
+						CREG = readMem(SP++);
+						BREG = readMem(SP++);
 					break;
 					
 					case 0xC2: // JP NZ,nn
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=4;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -1422,16 +1573,16 @@ public class CPU implements Runnable
 					
 					case 0xC3: // JP nn
 						numCycles+=4;
-						PC = MEM[PC] | (MEM[PC+1] << 8);
+						PC = readMem(PC) | (readMem(PC+1) << 8);
 					break;
 					
 					case 0xC4: // CALL NZ,nn
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=6;
-							MEM[--SP] = (PC+2) >> 8;
-							MEM[--SP] = (PC+2) & 0x00FF;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							writeMem(--SP, (PC+2) >> 8);
+							writeMem(--SP, (PC+2) & 0x00FF);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -1442,21 +1593,21 @@ public class CPU implements Runnable
 					
 					case 0xC5: //PUSH BC
 						numCycles+=4;
-						MEM[--SP] = BREG;
-						MEM[--SP] = CREG;
+						writeMem(--SP, BREG);
+						writeMem(--SP, CREG);
 					break;
 					
 					case 0xC6: // ADD A,n
 						numCycles+=2;
-						val = MEM[PC++];
-						FREG = FLAG_ADD[val][AREG];
-						AREG = (AREG+val) & 0xFF;
+						memval = readMem(PC++);
+						FREG = FLAG_ADD[memval][AREG];
+						AREG = (AREG+memval) & 0xFF;
 					break;
 					
 					case 0xC7: // RST 00H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0000;
 					break;
 					
@@ -1464,7 +1615,7 @@ public class CPU implements Runnable
 						if ((FREG & ZERO) != 0)
 						{
 							numCycles+=5;
-							PC = MEM[SP++] | (MEM[SP++] << 8);
+							PC = readMem(SP++) | (readMem(SP++) << 8);
 						}
 						else
 							numCycles+=2;
@@ -1472,11 +1623,11 @@ public class CPU implements Runnable
 					
 					case 0xC9: // RET
 						numCycles+=4;
-						PC = MEM[SP++] | (MEM[SP++] << 8);
+						PC = readMem(SP++) | (readMem(SP++) << 8);
 					break;
 					
 					case 0xCB: // 2-byte opcodes
-						switch (MEM[PC++])
+						switch (readMem(PC++))
 						{
 							case 0x00: // RLC B
 								numCycles+=2;
@@ -1529,9 +1680,9 @@ public class CPU implements Runnable
 							case 0x06: // RLC (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								val = MEM[index];
-								FREG = (val & BIT7) >> 3;
-								if ((MEM[index] = (((val << 1) | (val >> 7)) & 0xFF)) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT7) >> 3;
+								if (writeMem(index, ((memval << 1) | (memval >> 7)) & 0xFF) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -1594,9 +1745,9 @@ public class CPU implements Runnable
 							case 0x0E: // RRC (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								val = MEM[index];
-								FREG = (val & BIT0) << 4;
-								if ((MEM[index] = (((val >> 1) | (val << 7)) & 0xFF)) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT0) << 4;
+								if (writeMem(index, ((memval >> 1) | (memval << 7)) & 0xFF) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -1666,8 +1817,9 @@ public class CPU implements Runnable
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
 								val = (FREG & CARRY) >> 4;
-								FREG = (MEM[index] & BIT7) >> 3;
-								if ((MEM[index] = ((MEM[index] << 1) | val) & 0xFF) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT7) >> 3;
+								if (writeMem(index, ((memval << 1) | val) & 0xFF) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -1738,8 +1890,9 @@ public class CPU implements Runnable
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
 								val = (FREG & CARRY) << 3;
-								FREG = (MEM[index] & BIT0) << 4;
-								if ((MEM[index] = (MEM[index] >> 1) | val) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT0) << 4;
+								if (writeMem(index, (memval >> 1) | val) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -1803,8 +1956,9 @@ public class CPU implements Runnable
 							case 0x26: // SLA (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								FREG = (MEM[index] & BIT7) >> 3;
-								if ((MEM[index] = (MEM[index] << 1) & 0xFF) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT7) >> 3;
+								if (writeMem(index, (memval << 1) & 0xFF) == 0)
 									FREG |= 0;
 							break;
 							
@@ -1867,9 +2021,9 @@ public class CPU implements Runnable
 							case 0x2E: // SRA (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								val = MEM[index];
-								FREG = (val & BIT0) << 4;
-								if ((MEM[index] = (val & BIT7) | (val >> 1)) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT0) << 4;
+								if (writeMem(index, (memval & BIT7) | (memval >> 1)) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -1950,10 +2104,10 @@ public class CPU implements Runnable
 							case 0x36: // SWAP (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								val = MEM[index];
-								val >>= 4;
-								val |= ((MEM[index] & 0x0F) << 4);
-								MEM[index] = val;
+								memval = readMem(index);
+								val = memval >> 4;
+								val |= ((memval & 0x0F) << 4);
+								writeMem(index, val);
 								if (val == 0)
 									FREG = ZERO;
 								else
@@ -2022,8 +2176,9 @@ public class CPU implements Runnable
 							case 0x3E: // SRL (HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG;
-								FREG = (MEM[index] & BIT0) << 4;
-								if ((MEM[index] >>= 1) == 0)
+								memval = readMem(index);
+								FREG = (memval & BIT0) << 4;
+								if (writeMem(index, memval >> 1) == 0)
 									FREG |= ZERO;
 							break;
 							
@@ -2067,7 +2222,7 @@ public class CPU implements Runnable
 							
 							case 0x46: // BIT 0,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT0) << 7);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT0) << 7);
 							break;
 							
 							case 0x47: // BIT 0,A
@@ -2107,7 +2262,7 @@ public class CPU implements Runnable
 							
 							case 0x4E: // BIT 1,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT1) << 6);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT1) << 6);
 							break;
 							
 							case 0x4F: // BIT 1,A
@@ -2147,7 +2302,7 @@ public class CPU implements Runnable
 							
 							case 0x56: // BIT 2,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT2) << 5);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT2) << 5);
 							break;
 							
 							case 0x57: // BIT 2,A
@@ -2187,7 +2342,7 @@ public class CPU implements Runnable
 							
 							case 0x5E: // BIT 3,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT3) << 4);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT3) << 4);
 							break;
 							
 							case 0x5F: // BIT 3,A
@@ -2227,7 +2382,7 @@ public class CPU implements Runnable
 							
 							case 0x66: // BIT 4,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT4) << 3);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT4) << 3);
 							break;
 							
 							case 0x67: // BIT 4,A
@@ -2267,7 +2422,7 @@ public class CPU implements Runnable
 							
 							case 0x6E: // BIT 5,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT5) << 2);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT5) << 2);
 							break;
 							
 							case 0x6F: // BIT 5,A
@@ -2307,7 +2462,7 @@ public class CPU implements Runnable
 							
 							case 0x76: // BIT 6,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | ((~MEM[(HREG << 8) | LREG] & BIT6) << 1);
+								FREG = (FREG & CARRY) | HALF_CARRY | ((~readMem((HREG << 8) | LREG) & BIT6) << 1);
 							break;
 							
 							case 0x77: // BIT 6,A
@@ -2347,7 +2502,7 @@ public class CPU implements Runnable
 							
 							case 0x7E: // BIT 7,(HL)
 								numCycles+=4;
-								FREG = (FREG & CARRY) | HALF_CARRY | (~MEM[(HREG << 8) | LREG] & BIT7);
+								FREG = (FREG & CARRY) | HALF_CARRY | (~readMem((HREG << 8) | LREG) & BIT7);
 							break;
 							
 							case 0x7F: // BIT 7,A
@@ -2387,7 +2542,9 @@ public class CPU implements Runnable
 							
 							case 0x86: // RES 0,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT0;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT0);
+								// may create a method and change to: andMem((HREG << 8) | LREG, ~BIT0);
 							break;
 							
 							case 0x87: // RES 0,A
@@ -2427,7 +2584,8 @@ public class CPU implements Runnable
 							
 							case 0x8E: // RES 1,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT1;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT1);
 							break;
 							
 							case 0x8F: // RES 1,A
@@ -2467,7 +2625,8 @@ public class CPU implements Runnable
 							
 							case 0x96: // RES 2,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT2;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT2);
 							break;
 							
 							case 0x97: // RES 2,A
@@ -2507,7 +2666,8 @@ public class CPU implements Runnable
 							
 							case 0x9E: // RES 3,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT3;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT3);
 							break;
 							
 							case 0x9F: // RES 3,A
@@ -2547,7 +2707,8 @@ public class CPU implements Runnable
 							
 							case 0xA6: // RES 4,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT4;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT4);
 							break;
 							
 							case 0xA7: // RES 4,A
@@ -2587,7 +2748,8 @@ public class CPU implements Runnable
 							
 							case 0xAE: // RES 5,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT5;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT5);
 							break;
 							
 							case 0xAF: // RES 5,A
@@ -2627,7 +2789,8 @@ public class CPU implements Runnable
 							
 							case 0xB6: // RES 6,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT6;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT6);
 							break;
 							
 							case 0xB7: // RES 6,A
@@ -2667,7 +2830,8 @@ public class CPU implements Runnable
 							
 							case 0xBE: // RES 7,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] &= ~BIT7;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) & ~BIT0);
 							break;
 							
 							case 0xBF: // RES 7,A
@@ -2707,7 +2871,9 @@ public class CPU implements Runnable
 							
 							case 0xC6: // SET 0,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT0;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT0);
+								// may create a method and change to: orMem((HREG << 8) | LREG, BIT0);
 							break;
 							
 							case 0xC7: // SET 0,A
@@ -2747,7 +2913,8 @@ public class CPU implements Runnable
 							
 							case 0xCE: // SET 1,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT1;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT1);
 							break;
 							
 							case 0xCF: // SET 1,A
@@ -2787,7 +2954,8 @@ public class CPU implements Runnable
 							
 							case 0xD6: // SET 2,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT2;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT2);
 							break;
 							
 							case 0xD7: // SET 2,A
@@ -2827,7 +2995,8 @@ public class CPU implements Runnable
 							
 							case 0xDE: // SET 3,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT3;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT3);
 							break;
 							
 							case 0xDF: // SET 3,A
@@ -2867,7 +3036,8 @@ public class CPU implements Runnable
 							
 							case 0xE6: // SET 4,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT4;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT4);
 							break;
 							
 							case 0xE7: // SET 4,A
@@ -2907,7 +3077,8 @@ public class CPU implements Runnable
 							
 							case 0xEE: // SET 5,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT5;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT5);
 							break;
 							
 							case 0xEF: // SET 5,A
@@ -2947,7 +3118,8 @@ public class CPU implements Runnable
 							
 							case 0xF6: // SET 6,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT6;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT6);
 							break;
 							
 							case 0xF7: // SET 6,A
@@ -2987,7 +3159,8 @@ public class CPU implements Runnable
 							
 							case 0xFE: // SET 7,(HL)
 								numCycles+=4;
-								MEM[(HREG << 8) | LREG] |= BIT7;
+								index = (HREG << 8) | LREG; 
+								writeMem(index, readMem(index) | BIT7);
 							break;
 							
 							case 0xFF: // SET 7,A
@@ -3003,9 +3176,9 @@ public class CPU implements Runnable
 						if ((FREG & ZERO) != 0)
 						{
 							numCycles+=6;
-							MEM[--SP] = (PC+2) >> 8;
-							MEM[--SP] = (PC+2) & 0x00FF;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							writeMem(--SP, (PC+2) >> 8);
+							writeMem(--SP, (PC+2) & 0x00FF);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -3016,22 +3189,22 @@ public class CPU implements Runnable
 					
 					case 0xCD: // CALL nn
 						numCycles+=6;
-						MEM[--SP] = (PC+2) >> 8;
-						MEM[--SP] = (PC+2) & 0x00FF;
-						PC = MEM[PC] | (MEM[PC+1] << 8);
+						writeMem(--SP, (PC+2) >> 8);
+						writeMem(--SP, (PC+2) & 0x00FF);
+						PC = readMem(PC) | (readMem(PC+1) << 8);
 					break;
 					
 					case 0xCE: //ADC A,n
 						numCycles+=2;
-						val = MEM[PC++] + ((FREG & CARRY) >> 4);	
-						FREG = FLAG_ADD[val][AREG];
-						AREG = (AREG+val) & 0xFF;
+						memval = readMem(PC++) + ((FREG & CARRY) >> 4);	
+						FREG = FLAG_ADD[memval][AREG];
+						AREG = (AREG+memval) & 0xFF;
 					break;
 					
 					case 0xCF: // RST 08H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0008;
 					break;
 					
@@ -3039,7 +3212,7 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=5;
-							PC = MEM[SP++] | (MEM[SP++] << 8);
+							PC = readMem(SP++) | (readMem(SP++) << 8);
 						}
 						else
 							numCycles+=2;
@@ -3047,15 +3220,15 @@ public class CPU implements Runnable
 					
 					case 0xD1: // POP DE
 						numCycles+=3;
-						EREG = MEM[SP++];
-						DREG = MEM[SP++];
+						EREG = readMem(SP++);
+						DREG = readMem(SP++);
 					break;
 					
 					case 0xD2: // JP NC,nn
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=4;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -3068,9 +3241,9 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=6;
-							MEM[--SP] = (PC+2) >> 8;
-							MEM[--SP] = (PC+2) & 0x00FF;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							writeMem(--SP, (PC+2) >> 8);
+							writeMem(--SP, (PC+2) & 0x00FF);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -3081,21 +3254,21 @@ public class CPU implements Runnable
 						
 					case 0xD5: //PUSH DE
 						numCycles+=4;
-						MEM[--SP] = DREG;
-						MEM[--SP] = EREG;
+						writeMem(--SP, DREG);
+						writeMem(--SP, EREG);
 					break;
 					
 					case 0xD6: // SUB A,n
 						numCycles+=2;
-						val = MEM[PC++];
-						FREG = FLAG_SUB[val][AREG];
-						AREG = (AREG-val) &  0xFF;
+						memval = readMem(PC++);
+						FREG = FLAG_SUB[memval][AREG];
+						AREG = (AREG-memval) &  0xFF;
 					break;
 					
 					case 0xD7: // RST 10H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0010;
 					break;
 					
@@ -3103,7 +3276,7 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=5;
-							PC = MEM[SP++] | (MEM[SP++] << 8);
+							PC = readMem(SP++) | (readMem(SP++) << 8);
 						}
 						else
 							numCycles+=2;
@@ -3111,7 +3284,7 @@ public class CPU implements Runnable
 					
 					case 0xD9: // RETI
 						numCycles+=4;
-						PC = MEM[SP++] | (MEM[SP++] << 8);
+						PC = readMem(SP++) | (readMem(SP++) << 8);
 						IME = true;
 					break;
 					
@@ -3119,7 +3292,7 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=4;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -3132,9 +3305,9 @@ public class CPU implements Runnable
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=6;
-							MEM[--SP] = (PC+2) >> 8;
-							MEM[--SP] = (PC+2) & 0x00FF;
-							PC = MEM[PC] | (MEM[PC+1] << 8);
+							writeMem(--SP, (PC+2) >> 8);
+							writeMem(--SP, (PC+2) & 0x00FF);
+							PC = readMem(PC) | (readMem(PC+1) << 8);
 						}
 						else
 						{
@@ -3145,43 +3318,43 @@ public class CPU implements Runnable
 					
 					case 0xDE: // SBC A,n
 						numCycles+=2;
-						val = MEM[PC++] + ((FREG & CARRY) >> 4);
-						FREG = FLAG_SUB[val][AREG];
-						AREG = (AREG - val) & 0xFF;
+						memval = readMem(PC++) + ((FREG & CARRY) >> 4);
+						FREG = FLAG_SUB[memval][AREG];
+						AREG = (AREG - memval) & 0xFF;
 					break;
 					
 					case 0xDF: // RST 18H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0018;
 					break;
 					
 					case 0xE0: //LDH (n),A **WRITE TO ADDRESS N**
 						numCycles+=3;
-						MEM[ 0xFF00 + MEM[PC++] ] = AREG;
+						writeMem(0xFF00 + readMem(PC++), AREG);
 					break;
 					
 					case 0xE1: // POP HL
 						numCycles+=3;
-						LREG = MEM[SP++];
-						HREG = MEM[SP++];
+						LREG = readMem(SP++);
+						HREG = readMem(SP++);
 					break;
 						
 					case 0xE2: //LD (C),A **WRITE TO IO C**
 						numCycles+=2;
-						MEM[ 0xFF00 + CREG ] = AREG;
+						writeMem(0xFF00 + CREG, AREG);
 					break;
 					
 					case 0xE5: // PUSH HL
 						numCycles+=4;
-						MEM[--SP] = HREG;
-						MEM[--SP] = LREG;
+						writeMem(--SP, HREG);
+						writeMem(--SP, LREG);
 					break;
 					
 					case 0xE6: // AND n
 						numCycles+=2;
-						AREG &= MEM[PC++];
+						AREG &= readMem(PC++);
 						if (AREG == 0)
 							FREG = ZERO | HALF_CARRY;
 						else
@@ -3190,14 +3363,14 @@ public class CPU implements Runnable
 					
 					case 0xE7: // RST 20H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0020;
 					break;
 					
 					case 0xE8: //ADD SP,n **ignores half-carry**
 						numCycles+=4;
-						SP += (byte)MEM[PC++]; // signed immediate
+						SP += (byte)readMem(PC++); // signed immediate
 						if (SP > 0xFFFF)
 						{
 							SP &= 0xFFFF;
@@ -3214,12 +3387,12 @@ public class CPU implements Runnable
 					
 					case 0xEA: //LD (nn),A
 						numCycles+=4;
-						MEM[ MEM[PC++] | (MEM[PC++] << 8) ] = AREG;
+						writeMem(readMem(PC++) | (readMem(PC++) << 8), AREG);
 					break;
 					
 					case 0xEE: // XOR n
 						numCycles+=2;
-						AREG ^= MEM[PC++];
+						AREG ^= readMem(PC++);
 						if (AREG == 0)
 							FREG = ZERO;
 						else
@@ -3228,25 +3401,25 @@ public class CPU implements Runnable
 					
 					case 0xEF: // RST 28H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0028;
 					break;
 					
 					case 0xF0: //LDH (n),A **READ FROM ADDRESS N**
 						numCycles+=3;
-						AREG = MEM[ 0xFF00 + MEM[PC++] ];
+						AREG = readMem(0xFF00 + readMem(PC++));
 					break;
 					
 					case 0xF1: // POP AF
 						numCycles+=3;
-						FREG = MEM[SP++];
-						AREG = MEM[SP++];
+						FREG = readMem(SP++);
+						AREG = readMem(SP++);
 					break;
 					
 					case 0xF2: //LD A,(C) **READ FROM IO C**
 						numCycles += 2;
-						AREG = MEM[ 0xFF00 + CREG ];
+						AREG = readMem(0xFF00 + CREG);
 					break;
 					
 					case 0xF3: // DI
@@ -3257,13 +3430,13 @@ public class CPU implements Runnable
 					
 					case 0xF5: // PUSH AF
 						numCycles+=4;
-						MEM[--SP] = AREG;
-						MEM[--SP] = FREG;
+						writeMem(--SP, AREG);
+						writeMem(--SP, FREG);
 					break;
 					
 					case 0xF6: // OR n
 						numCycles+=2;
-						AREG |= MEM[PC++];
+						AREG |= readMem(PC++);
 						if (AREG == 0)
 							FREG = ZERO;
 						else
@@ -3272,14 +3445,14 @@ public class CPU implements Runnable
 					
 					case 0xF7: // RST 30H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0030;
 					break;
 					
 					case 0xF8: //LDHL SP,n **ignores half-carry**
 						numCycles+=3;
-						val = SP + (byte)MEM[PC++]; // signed immediate
+						val = SP + (byte)readMem(PC++); // signed immediate
 						if (val > 0xFFFF)
 						{
 							val &= 0xFFFF;
@@ -3298,7 +3471,7 @@ public class CPU implements Runnable
 					 
 					case 0xFA: //LD A,(nn)
 						numCycles+=4;
-						AREG = MEM[ MEM[PC++] | (MEM[PC++] << 8) ];
+						AREG = readMem(readMem(PC++) | (readMem(PC++) << 8));
 					break;
 					
 					case 0xFB: // EI
@@ -3309,13 +3482,13 @@ public class CPU implements Runnable
 					
 					case 0xFE: // CP n
 						numCycles+=2;
-						FREG = FLAG_SUB[ MEM[PC++] ][AREG];
+						FREG = FLAG_SUB[ readMem(PC++) ][AREG];
 					break;
 					
 					case 0xFF: // RST 38H
 						numCycles += 4;
-						MEM[--SP] = PC >> 8;
-						MEM[--SP] = PC & 0x00FF;
+						writeMem(--SP, PC >> 8);
+						writeMem(--SP, PC & 0x00FF);
 						PC = 0x0038;
 					break;
 					
