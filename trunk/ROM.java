@@ -53,6 +53,22 @@ public class ROM{
 		return banks[selectedBank][index];
 	}
 	
+	public int[] getDefaultROM()
+	{
+		return banks[0];
+	}
+	
+	public int[] getROM(int bank)
+	{
+		return banks[bank];
+	}
+	
+	public int[] getRAM(int bank)
+	{
+		// implement later
+		return null;
+	}
+	
 	// Returns true if the ROM is a Color GB
 	public boolean isCGB(){
 		if(banks[0][0x0143]==0){
@@ -96,7 +112,7 @@ public class ROM{
 		String out="";
 		int numBanks=0;
 		switch(bank[0x148]){
-			case 0x0: out="32KB (no bank)"; numBanks = 1; break;
+			case 0x0: out="32KB (2 banks)"; numBanks = 2; break;
 			case 0x1: out="64KB (4 bank)"; numBanks = 4; break;
 			case 0x2: out="128KB (8 banks)"; numBanks = 8; break;
 			case 0x3: out="256KB (16 banks)"; numBanks = 16; break;
