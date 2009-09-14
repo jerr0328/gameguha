@@ -123,32 +123,34 @@ public class GUI
 				for (x = 0; x < 640; x++)
 				{
 					xPixel = x >> 2;
+					
+					int randCol = gen.nextInt();
 
-					buffer[x + y1] = gen.nextInt();
-					buffer[x + y2] = gen.nextInt();
-					buffer[x + y3] = gen.nextInt();
-					buffer[x + y4] = gen.nextInt();
+					buffer[x + y1] = randCol;
+					buffer[x + y2] = randCol;
+					buffer[x + y3] = randCol;
+					buffer[x + y4] = randCol;
 					
 					x++;
 					
-					buffer[x + y1] = gen.nextInt();
-					buffer[x + y2] = gen.nextInt();
-					buffer[x + y3] = gen.nextInt();
-					buffer[x + y4] = gen.nextInt();
+					buffer[x + y1] = randCol;
+					buffer[x + y2] = randCol;
+					buffer[x + y3] = randCol;
+					buffer[x + y4] = randCol;;
 					
 					x++;
 					
-					buffer[x + y1] = gen.nextInt();
-					buffer[x + y2] = gen.nextInt();
-					buffer[x + y3] = gen.nextInt();
-					buffer[x + y4] = gen.nextInt();
+					buffer[x + y1] = randCol;
+					buffer[x + y2] = randCol;
+					buffer[x + y3] = randCol;
+					buffer[x + y4] = randCol;
 					
 					x++;
 					
-					buffer[x + y1] = gen.nextInt();
-					buffer[x + y2] = gen.nextInt();
-					buffer[x + y3] = gen.nextInt();
-					buffer[x + y4] = gen.nextInt();
+					buffer[x + y1] = randCol;
+					buffer[x + y2] = randCol;
+					buffer[x + y3] = randCol;
+					buffer[x + y4] = randCol;
 				}
 			}
 			
