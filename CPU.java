@@ -1,13 +1,13 @@
 public class CPU implements Runnable
 {
-	private static final int BIT7 = 1<<7;
-	private static final int BIT6 = 1<<6;
-	private static final int BIT5 = 1<<5;
-	private static final int BIT4 = 1<<4;
-	private static final int BIT3 = 1<<3;
-	private static final int BIT2 = 1<<2;
-	private static final int BIT1 = 1<<1;
-	private static final int BIT0 = 1<<0;
+	public static final int BIT7 = 1<<7;
+ 	public static final int BIT6 = 1<<6;
+	public static final int BIT5 = 1<<5;
+	public static final int BIT4 = 1<<4;
+	public static final int BIT3 = 1<<3;
+	public static final int BIT2 = 1<<2;
+	public static final int BIT1 = 1<<1;
+	public static final int BIT0 = 1<<0;
 	
 	private static final int ZERO       = BIT7;
 	private static final int SUBTRACT   = BIT6;
@@ -27,6 +27,7 @@ public class CPU implements Runnable
 	private int IE;
 	
 	private ROM rom;
+	private Sound snd = new Sound(); 
 	private int mbc = 0; // ROM only for now
 	private int numCycles = 0;
 	private int scanline = 0;
@@ -182,6 +183,10 @@ public class CPU implements Runnable
 					switch(index)
 					{
 						// Handle IO ports
+						case 0xFF10: //Channel 1, Sweep
+						snd.channel1.setSweep(val);
+						break;
+						
 						default: return 0;
 					}
 					
