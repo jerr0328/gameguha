@@ -12,7 +12,8 @@ public class GUI
 	{
     	Frame frame = new Frame("GameGuha");
     	MenuBar mb = new MenuBar();
-    	mb.add(new Menu("File"));
+    	mb.add(new FileMenu(frame));
+    	mb.add(new SoundMenu(frame));
     	frame.setMenuBar(mb);
     	
 		frame.setVisible(true); 
@@ -155,6 +156,87 @@ public class GUI
 			}
 			
 			g.drawImage(screen,ins.left,ins.top,null); 
+		}
+	}
+}
+class FileMenu extends Menu implements ActionListener {
+	Frame mw;
+	public FileMenu(Frame m){
+		super("File");
+		mw = m;
+		MenuItem mi; 
+	    add(mi = new MenuItem("Open")); 
+	    mi.addActionListener(this); 
+	    add(mi = new MenuItem("Exit")); 
+	    mi.addActionListener(this); 
+
+	}
+	public void actionPerformed(ActionEvent e) { 
+		String item = e.getActionCommand(); 
+		if (item.equals("Open")){
+			//mw.exit(); 
+			FileDialog f = new FileDialog(mw, "Open ROM");
+			f.setVisible(true);
+			String file = f.getFile();
+			if(file != null){
+				ROM rom = new ROM(f.getDirectory()+file);
+		        rom.printTitle();
+		        rom.printCartType();
+				rom.printRAMSize();
+		        System.out.print("Color: ");
+		        if(rom.isCGB())
+		            System.out.println("Yes");
+		        else
+		            System.out.println("No");
+		        // So this starts the CPU if it's a valid ROM
+				if(rom.verifyChecksum()){
+					/* Since we need to pass the ROM, unless we put some
+					 * global variable for the ROM, we can't have it in
+					 * another "start" option for now.
+					 */
+					Thread cpu = new Thread(new CPU(rom));
+					cpu.start();
+				}
+				// Should we output something for "Invalid ROM?"
+			}
+		}
+		else
+			System.out.println("Selected FileMenu " + item); 
+	} 
+}
+class SoundMenu extends Menu implements ActionListener {
+	Frame mw;
+	public SoundMenu(Frame m){
+		super("Sound");
+		mw = m;
+		MenuItem mi; 
+		add(mi = new CheckboxMenuItem("Sound Enable",true));
+	    mi.addActionListener(this); 
+	    add(mi = new CheckboxMenuItem("Channel 1")); 
+	    mi.addActionListener(this); 
+	    add(mi = new CheckboxMenuItem("Channel 2")); 
+	    mi.addActionListener(this); 
+	    add(mi = new CheckboxMenuItem("Channel 3")); 
+	    mi.addActionListener(this); 
+	    add(mi = new CheckboxMenuItem("Channel 4")); 
+	    mi.addActionListener(this); 
+	}
+	public void actionPerformed(ActionEvent e) { 
+		String item = e.getActionCommand(); 
+		if (item.equals("Sound Enable")){
+			// Toggle sound
+		}
+		else if(item.equals("Channel 1")){
+			// Toggle channel
+		}
+		else if(item.equals("Channel 2")){
+			// Toggle channel
+		}
+		else if(item.equals("Channel 3")){
+			// Toggle channel
+		}
+		else if(item.equals("Channel 4")){
+			// Toggle channel
 		}
 	}
 }

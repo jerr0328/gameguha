@@ -1,3 +1,4 @@
+// This is now @deprecated. These methods implemented in GUI now
 public class ROMtest {
 
     public static void main(String[] args) {
