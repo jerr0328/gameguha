@@ -6,6 +6,12 @@ class SquareWaveGen{
 	int sweepTime;
 	boolean sweepDec;
 	int sweepNum;
+	int sampleRate;
+	
+	public SquareWaveGen(int rate)
+	{
+		rate=sampleRate;
+	}
 	
 	public void setSweep(int val)
 	{
@@ -36,5 +42,10 @@ public class Sound {
 	boolean soundEnabled = false;
 	boolean channel1Enable = true, channel2Enable = true,
 			channel3Enable = true, channel4Enable = true;
+			
+	public Sound()
+	{
+		channel1 = new SquareWaveGen(defaultSampleRate);
+	}
 			
 }
