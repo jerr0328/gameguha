@@ -192,4 +192,14 @@ public class ROM{
 		}
 		System.out.println();
 	}
+	
+	public String getTitle(){
+		StringBuffer sb = new StringBuffer();
+		int ptr=0x0134;
+		while(ptr <0x0143 && banks[0][ptr]!=0){
+		sb.append((char)banks[0][ptr]);
+		ptr++;
+		}
+		return sb.toString();
+	}
 }

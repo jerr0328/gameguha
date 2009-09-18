@@ -53,10 +53,6 @@ public class CPU extends Thread
 	private boolean pleaseWait;
 	private boolean halt;
 	
-	public void setHalt(boolean halt) {
-		this.halt = halt;
-	}
-
 	public CPU(ROM rom)
 	{
 		this.rom = rom;
@@ -64,14 +60,28 @@ public class CPU extends Thread
 		halt = false;
 	}
 	
+	public String toString()
+	{
+		return rom.getTitle();
+	}
+	
+	public boolean getHalt()
+	{
+		return halt;
+	}
+	
+	public void setHalt(boolean halt) {
+		this.halt = halt;
+	}
+	
 	public boolean getWaiting()
 	{
 		return pleaseWait;
 	}
 	
-	public void setWaiting(boolean isWaiting)
+	public void setWaiting(boolean pleaseWait)
 	{
-		pleaseWait = isWaiting;
+		this.pleaseWait = pleaseWait;
 	}
 	
 	private static void genFlagTable(int[][] FLAG_ADD, int[][] FLAG_SUB, int[] FLAG_INC, int[] FLAG_DEC)
@@ -304,12 +314,12 @@ public class CPU extends Thread
 		
 		for(;;) // loop until thread stops
 		{
-			// Check if should wait
+			// Check if should perform actions
 			synchronized (this) {
 		    	while (pleaseWait) {
 			    	try {
 			        	wait();
-			        } catch (Exception e) {}
+			        } catch (Exception e) {/*maybe print something here*/}
 			    }
 		    	if(halt){
 		    		return;
