@@ -45,7 +45,7 @@ public class GUI
 			
 			if (frames == 60)
 			{
-				System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
+			//	System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
 				frames = 0;
 				startT = System.nanoTime();
 			}
@@ -199,32 +199,65 @@ class FileMenu extends Menu implements ActionListener {
 					 * global variable for the ROM, we can't have it in
 					 * another "start" option for now.
 					 */
+					
 					if(GUI.cpu != null){
+						synchronized(GUI.cpu)
+						{
+						System.out.println("Thread: "+GUI.cpu+ " Halted");	
 						GUI.cpu.setHalt(true);
+						GUI.cpu = null;
+						}
 					}
+					
 					GUI.cpu = new CPU(rom);
 					GUI.cpu.start();
 				}
 				// Should we output something for "Invalid ROM?"
 			}
 		}
-		if(item.equals("Run")){
-			if(!GUI.cpu.getWaiting()){}
-			//Dunno what to do here for now
+		else if(item.equals("Run")){
+			if(GUI.cpu!=null)
+			{
+				if(!GUI.cpu.getWaiting())
+					System.out.println("Thread: "+GUI.cpu+ " is Running");
+				else
+					synchronized(GUI.cpu)
+					{
+					GUI.cpu.setWaiting(false);
+					GUI.cpu.notify();
+					System.out.println("Thread: "+GUI.cpu+ " Resumed");
+					}
+			}
 			else
-				synchronized(GUI.cpu){
-				GUI.cpu.setWaiting(false);
-				GUI.cpu.notify();
-				}
+				System.out.println("No Thread Running");
 		}
-		if(item.equals("Pause")){
-			if(!GUI.cpu.getWaiting())
+		else if(item.equals("Pause")){
+			if(GUI.cpu !=null)
+			{
+				if(!GUI.cpu.getWaiting())
+					{
+						synchronized(GUI.cpu)
+						{
+							GUI.cpu.setWaiting(true);
+							System.out.println("Thread: "+GUI.cpu+" Paused");
+						}
+					}
+				else
+					System.out.println("THread: "+GUI.cpu+" Already Paused");
+			}
+			else
+				System.out.println("No Thread Running");
+		}
+		else if(item.equals("Exit")){
+			if(GUI.cpu!=null)
+				synchronized(GUI.cpu)
 				{
-					synchronized(GUI.cpu){ GUI.cpu.setWaiting(true); }
+					System.out.println("Thread: "+GUI.cpu+" Halted");
+					GUI.cpu.setHalt(true);
+					GUI.cpu=null;
 				}
-		}
-		if(item.equals("Exit")){
-			GUI.cpu.setHalt(true);
+			else
+				System.out.println("No Thread Running");
 		}
 		else
 			System.out.println("Selected FileMenu " + item); 
