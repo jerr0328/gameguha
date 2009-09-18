@@ -199,6 +199,9 @@ class FileMenu extends Menu implements ActionListener {
 					 * global variable for the ROM, we can't have it in
 					 * another "start" option for now.
 					 */
+					if(GUI.cpu != null){
+						GUI.cpu.setHalt(true);
+					}
 					GUI.cpu = new CPU(rom);
 					GUI.cpu.start();
 				}
@@ -219,6 +222,9 @@ class FileMenu extends Menu implements ActionListener {
 				{
 					synchronized(GUI.cpu){ GUI.cpu.setWaiting(true); }
 				}
+		}
+		if(item.equals("Exit")){
+			GUI.cpu.setHalt(true);
 		}
 		else
 			System.out.println("Selected FileMenu " + item); 

@@ -51,11 +51,17 @@ public class CPU extends Thread
 	private int numCycles = 0;
 	private int scanline = 0;
 	private boolean pleaseWait;
+	private boolean halt;
 	
+	public void setHalt(boolean halt) {
+		this.halt = halt;
+	}
+
 	public CPU(ROM rom)
 	{
 		this.rom = rom;
 		pleaseWait = false; // Not in a waiting state on first run
+		halt = false;
 	}
 	
 	public boolean getWaiting()
@@ -298,9 +304,6 @@ public class CPU extends Thread
 		
 		for(;;) // loop until thread stops
 		{
-				
-	 		while (scanline <= 153) // from 144 to 153 is v-blank period
-			{
 			// Check if should wait
 			synchronized (this) {
 		    	while (pleaseWait) {
@@ -308,13 +311,19 @@ public class CPU extends Thread
 			        	wait();
 			        } catch (Exception e) {}
 			    }
-			}
+		    	if(halt){
+		    		return;
+		    	}
+			}	
+	 		while (scanline <= 153) // from 144 to 153 is v-blank period
+			{
 			
+			/*
 				if(readMem(PC)!=0xCB)
 					System.out.format("Operation 0x%02X at %X\n",readMem(PC),PC);
 				else
 					System.out.format("Operation 0x%02X 0x%02X at %X\n",readMem(PC),readMem(PC+1),PC);
-						
+					*/	
 				switch(readMem(PC++))
 				{
 					case 0x00: //NOP
