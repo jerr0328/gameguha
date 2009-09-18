@@ -48,8 +48,6 @@ public class CPU extends Thread
 	private ROM rom;
 	private Sound snd = new Sound(); 
 	private int mbc = 0; // ROM only for now
-	private int numCycles = 0;
-	private int scanline = 0;
 	private boolean pleaseWait;
 	private boolean halt;
 	
@@ -309,8 +307,15 @@ public class CPU extends Thread
 		int val;
 		int memval;
 		int index;
+		int frameCount = 0;
+		int numCycles = 0;
+		int scanline = 0;
+		int nextHBlank = 114;
+		int nextVBlank = 114*144;	
 	
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
+		
+		long startT = System.nanoTime();
 		
 		for(;;) // loop until thread stops
 		{
@@ -324,7 +329,8 @@ public class CPU extends Thread
 		    	if(halt){
 		    		return;
 		    	}
-			}	
+			}
+			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
 			
@@ -3563,7 +3569,31 @@ public class CPU extends Thread
 					default: throw new AssertionError("Unsupported opcode");
 				}
 				
-				/*
+				if (numCycles >= nextHBlank)
+				{
+					nextHBlank += 114;
+					
+					// draw scanline
+					scanline++;
+					
+					if (numCycles >= nextVBlank)
+					{
+						//handle vb inter.
+						nextVBlank += 114*154;
+					}
+					
+					if (numCycles >= 0x100000)
+					{
+						numCycles &= 0xFFFFF;
+						nextHBlank &= 0xFFFFF;
+						nextVBlank &= 0xFFFFF;
+					}
+					
+					//DIVIDER = numCycles >> 6;
+					//TIMA = ...
+				}
+				
+				/* old way + psuedo code
 				if (numCycles >= CYCLES_PER_LINE)
 				{
 					numCycles -= CYCLES_PER_LINE;
@@ -3602,7 +3632,17 @@ public class CPU extends Thread
 			}
 			
 			// Inform GUI class to render Gameboy's VRAM to screen
-			// MEM[LY] = scanline = 0; // new frame
+			scanline = 0; // new frame
+			frameCount++;
+			
+			if (frameCount == 100)
+			{
+				double secPer100 = (System.nanoTime()-startT) / 1000000000.0;
+				System.out.println(1.0 / (secPer100 * 0.01) + " fps");
+				frameCount = 0;
+				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
+				startT = System.nanoTime();
+			}
 		}
 		
 		// cannot end main loop while CPU is still running!

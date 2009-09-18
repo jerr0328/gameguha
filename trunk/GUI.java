@@ -5,11 +5,16 @@ import java.util.*; // random colors look cool! but slow to generate
 
 public class GUI
 {
-	private static int screenWidth = 160*4;
-	private static int screenHeight = 144*4;
-	protected static CPU cpu;
+	private int screenWidth = 160*4;
+	private int screenHeight = 144*4;
+	private CPU cpu;
 	
 	public static void main(String[] args)
+	{
+		new GUI().go();
+	}
+	
+	public void go()
 	{
     	Frame frame = new Frame("GameGuha");
     	MenuBar mb = new MenuBar();
@@ -39,7 +44,7 @@ public class GUI
 		int frames = 0;
 		long startT = System.nanoTime();
 
-		while(true)
+		while(frames < 0) // change back to while(true) for pretty colors
 		{
 			frames++;
 			
@@ -159,146 +164,148 @@ public class GUI
 			g.drawImage(screen,ins.left,ins.top,null); 
 		}
 	}
-}
-class FileMenu extends Menu implements ActionListener {
-	Frame mw;
-		
-	public FileMenu(Frame m){
-		super("File");
-		mw = m;
-		MenuItem mi; 
-	    add(mi = new MenuItem("Open")); 
-	    mi.addActionListener(this);
-	 	add(mi = new MenuItem("Run"));
-		mi.addActionListener(this);
-		add(mi = new MenuItem("Pause"));
+	
+	class FileMenu extends Menu implements ActionListener {
+		Frame mw;
+			
+		public FileMenu(Frame m){
+			super("File");
+			mw = m;
+			MenuItem mi; 
+		    add(mi = new MenuItem("Open")); 
+		    mi.addActionListener(this);
+		 	add(mi = new MenuItem("Run"));
 			mi.addActionListener(this);
-	    add(mi = new MenuItem("Exit")); 
-	    mi.addActionListener(this); 
-
-	}
-	public void actionPerformed(ActionEvent e) { 
-		String item = e.getActionCommand(); 
-		if (item.equals("Open")){
-			//mw.exit(); 
-			FileDialog f = new FileDialog(mw, "Open ROM");
-			f.setVisible(true);
-			String file = f.getFile();
-			if(file != null){
-				ROM rom = new ROM(f.getDirectory()+file);
-		        rom.printTitle();
-		        rom.printCartType();
-				rom.printRAMSize();
-		        System.out.print("Color: ");
-		        if(rom.isCGB())
-		            System.out.println("Yes");
-		        else
-		            System.out.println("No");
-		        // So this starts the CPU if it's a valid ROM
-				if(rom.verifyChecksum()){
-					/* Since we need to pass the ROM, unless we put some
-					 * global variable for the ROM, we can't have it in
-					 * another "start" option for now.
-					 */
-					
-					if(GUI.cpu != null){
-						synchronized(GUI.cpu)
-						{
-						System.out.println("Thread: "+GUI.cpu+ " Halted");	
-						GUI.cpu.setHalt(true);
-						GUI.cpu = null;
+			add(mi = new MenuItem("Pause"));
+				mi.addActionListener(this);
+		    add(mi = new MenuItem("Exit")); 
+		    mi.addActionListener(this); 
+	
+		}
+		public void actionPerformed(ActionEvent e) { 
+			String item = e.getActionCommand(); 
+			if (item.equals("Open")){
+				//mw.exit(); 
+				FileDialog f = new FileDialog(mw, "Open ROM");
+				f.setVisible(true);
+				String file = f.getFile();
+				if(file != null){
+					ROM rom = new ROM(f.getDirectory()+file);
+			        rom.printTitle();
+			        rom.printCartType();
+					rom.printRAMSize();
+			        System.out.print("Color: ");
+			        if(rom.isCGB())
+			            System.out.println("Yes");
+			        else
+			            System.out.println("No");
+			        // So this starts the CPU if it's a valid ROM
+					if(rom.verifyChecksum()){
+						/* Since we need to pass the ROM, unless we put some
+						 * global variable for the ROM, we can't have it in
+						 * another "start" option for now.
+						 */
+						
+						if(cpu != null){
+							synchronized(cpu)
+							{
+							System.out.println("Thread: "+cpu+ " Halted");	
+							cpu.setHalt(true);
+							cpu = null;
+							}
 						}
+						
+						cpu = new CPU(rom);
+						cpu.start();
 					}
-					
-					GUI.cpu = new CPU(rom);
-					GUI.cpu.start();
+					// Should we output something for "Invalid ROM?"
 				}
-				// Should we output something for "Invalid ROM?"
 			}
-		}
-		else if(item.equals("Run")){
-			if(GUI.cpu!=null)
-			{
-				if(!GUI.cpu.getWaiting())
-					System.out.println("Thread: "+GUI.cpu+ " is Running");
-				else
-					synchronized(GUI.cpu)
-					{
-					GUI.cpu.setWaiting(false);
-					GUI.cpu.notify();
-					System.out.println("Thread: "+GUI.cpu+ " Resumed");
-					}
-			}
-			else
-				System.out.println("No Thread Running");
-		}
-		else if(item.equals("Pause")){
-			if(GUI.cpu !=null)
-			{
-				if(!GUI.cpu.getWaiting())
-					{
-						synchronized(GUI.cpu)
-						{
-							GUI.cpu.setWaiting(true);
-							System.out.println("Thread: "+GUI.cpu+" Paused");
-						}
-					}
-				else
-					System.out.println("THread: "+GUI.cpu+" Already Paused");
-			}
-			else
-				System.out.println("No Thread Running");
-		}
-		else if(item.equals("Exit")){
-			if(GUI.cpu!=null)
-				synchronized(GUI.cpu)
+			else if(item.equals("Run")){
+				if(cpu!=null)
 				{
-					System.out.println("Thread: "+GUI.cpu+" Halted");
-					GUI.cpu.setHalt(true);
-					GUI.cpu=null;
+					if(!cpu.getWaiting())
+						System.out.println("Thread: "+cpu+ " is Running");
+					else
+						synchronized(cpu)
+						{
+						cpu.setWaiting(false);
+						cpu.notify();
+						System.out.println("Thread: "+cpu+ " Resumed");
+						}
 				}
+				else
+					System.out.println("No Thread Running");
+			}
+			else if(item.equals("Pause")){
+				if(cpu !=null)
+				{
+					if(!cpu.getWaiting())
+						{
+							synchronized(cpu)
+							{
+								cpu.setWaiting(true);
+								System.out.println("Thread: "+cpu+" Paused");
+							}
+						}
+					else
+						System.out.println("Thread: "+cpu+" Already Paused");
+				}
+				else
+					System.out.println("No Thread Running");
+			}
+			else if(item.equals("Exit")){
+				if(cpu!=null)
+					synchronized(cpu)
+					{
+						System.out.println("Thread: "+cpu+" Halted");
+						cpu.setHalt(true);
+						cpu=null;
+					}
+				else
+					System.out.println("No Thread Running");
+				System.exit(0); //messy, probably should pass this a window event
+								//not that I know how... :x
+			}
 			else
-				System.out.println("No Thread Running");
-			System.exit(0); //messy, probably should pass this a window event
-							//not that I know how... :x
-		}
-		else
-			System.out.println("Selected FileMenu " + item); 
-	} 
-}
-class SoundMenu extends Menu implements ActionListener {
-	Frame mw;
-	public SoundMenu(Frame m){
-		super("Sound");
-		mw = m;
-		MenuItem mi; 
-		add(mi = new CheckboxMenuItem("Sound Enable",true));
-	    mi.addActionListener(this); 
-	    add(mi = new CheckboxMenuItem("Channel 1")); 
-	    mi.addActionListener(this); 
-	    add(mi = new CheckboxMenuItem("Channel 2")); 
-	    mi.addActionListener(this); 
-	    add(mi = new CheckboxMenuItem("Channel 3")); 
-	    mi.addActionListener(this); 
-	    add(mi = new CheckboxMenuItem("Channel 4")); 
-	    mi.addActionListener(this); 
+				System.out.println("Selected FileMenu " + item); 
+		} 
 	}
-	public void actionPerformed(ActionEvent e) { 
-		String item = e.getActionCommand(); 
-		if (item.equals("Sound Enable")){
-			// Toggle sound
+	
+	class SoundMenu extends Menu implements ActionListener {
+		Frame mw;
+		public SoundMenu(Frame m){
+			super("Sound");
+			mw = m;
+			MenuItem mi; 
+			add(mi = new CheckboxMenuItem("Sound Enable",true));
+		    mi.addActionListener(this); 
+		    add(mi = new CheckboxMenuItem("Channel 1")); 
+		    mi.addActionListener(this); 
+		    add(mi = new CheckboxMenuItem("Channel 2")); 
+		    mi.addActionListener(this); 
+		    add(mi = new CheckboxMenuItem("Channel 3")); 
+		    mi.addActionListener(this); 
+		    add(mi = new CheckboxMenuItem("Channel 4")); 
+		    mi.addActionListener(this); 
 		}
-		else if(item.equals("Channel 1")){
-			// Toggle channel
-		}
-		else if(item.equals("Channel 2")){
-			// Toggle channel
-		}
-		else if(item.equals("Channel 3")){
-			// Toggle channel
-		}
-		else if(item.equals("Channel 4")){
-			// Toggle channel
+		public void actionPerformed(ActionEvent e) { 
+			String item = e.getActionCommand(); 
+			if (item.equals("Sound Enable")){
+				// Toggle sound
+			}
+			else if(item.equals("Channel 1")){
+				// Toggle channel
+			}
+			else if(item.equals("Channel 2")){
+				// Toggle channel
+			}
+			else if(item.equals("Channel 3")){
+				// Toggle channel
+			}
+			else if(item.equals("Channel 4")){
+				// Toggle channel
+			}
 		}
 	}
 }
