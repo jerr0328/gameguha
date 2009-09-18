@@ -7,6 +7,8 @@ class SquareWaveGen{
 	boolean sweepDec;
 	int sweepNum;
 	int sampleRate;
+	int dutyCycle;
+	int sndLen;
 	
 	public SquareWaveGen(int rate)
 	{
@@ -18,6 +20,30 @@ class SquareWaveGen{
 		sweepTime = val & (CPU.BIT6 | CPU.BIT5 | CPU.BIT4);
 		sweepDec = (val & CPU.BIT3) != 0;
 		sweepNum = (val & CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
+	}
+	
+	public void setDutyCycle(int val) 
+	{
+		val&= (CPU.BIT6 | CPU.BIT7);
+		switch(val) //these are in 8ths 
+		{
+			case 0: dutyCycle = 1; //12.5%
+				break;
+			case 1: dutyCycle = 2; //25%
+				break;
+			case 2: dutyCycle = 4; //50%
+				break;
+			case 3: dutyCycle = 6; //75%
+		}
+	}
+	
+	public void setLength(int val)
+	{
+		val&= (CPU.BIT0 | CPU.BIT1 | CPU.BIT2 | CPU.BIT3 | CPU.BIT4 | CPU.BIT5);
+		if(val==-1)
+			sndLen=1;
+		else
+			sndLen = (64-val) * (1/256);
 	}
 }
 

@@ -7,7 +7,8 @@ public class GUI
 {
 	private static int screenWidth = 160*4;
 	private static int screenHeight = 144*4;
-    
+	protected static CPU cpu;
+	
 	public static void main(String[] args)
 	{
     	Frame frame = new Frame("GameGuha");
@@ -166,7 +167,11 @@ class FileMenu extends Menu implements ActionListener {
 		mw = m;
 		MenuItem mi; 
 	    add(mi = new MenuItem("Open")); 
-	    mi.addActionListener(this); 
+	    mi.addActionListener(this);
+	 	add(mi = new MenuItem("Run"));
+		mi.addActionListener(this);
+		add(mi = new MenuItem("Pause"));
+			mi.addActionListener(this);
 	    add(mi = new MenuItem("Exit")); 
 	    mi.addActionListener(this); 
 
@@ -194,11 +199,26 @@ class FileMenu extends Menu implements ActionListener {
 					 * global variable for the ROM, we can't have it in
 					 * another "start" option for now.
 					 */
-					Thread cpu = new Thread(new CPU(rom));
-					cpu.start();
+					GUI.cpu = new CPU(rom);
+					GUI.cpu.start();
 				}
 				// Should we output something for "Invalid ROM?"
 			}
+		}
+		if(item.equals("Run")){
+			if(!GUI.cpu.getWaiting()){}
+			//Dunno what to do here for now
+			else
+				synchronized(GUI.cpu){
+				GUI.cpu.setWaiting(false);
+				GUI.cpu.notify();
+				}
+		}
+		if(item.equals("Pause")){
+			if(!GUI.cpu.getWaiting())
+				{
+					synchronized(GUI.cpu){ GUI.cpu.setWaiting(true); }
+				}
 		}
 		else
 			System.out.println("Selected FileMenu " + item); 

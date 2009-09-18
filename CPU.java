@@ -1,5 +1,24 @@
-public class CPU implements Runnable
+public class CPU extends Thread
 {
+/*	private static class ThreadLocalWaiting extends ThreadLocal
+	{
+		protected boolean pleaseWait=false;
+		protected synchronized Object InitialValue()
+		{
+			return pleaseWait;
+		}
+		
+		public synchronized Object get()
+		{
+			return pleaseWait;
+		}
+		
+		protected synchronized Object set(boolean isWaiting)
+		{
+			pleaseWait = isWaiting;
+		}
+	}*/
+		
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
 	public static final int BIT5 = 1<<5;
@@ -31,10 +50,22 @@ public class CPU implements Runnable
 	private int mbc = 0; // ROM only for now
 	private int numCycles = 0;
 	private int scanline = 0;
+	private boolean pleaseWait;
 	
 	public CPU(ROM rom)
 	{
 		this.rom = rom;
+		pleaseWait = false; // Not in a waiting state on first run
+	}
+	
+	public boolean getWaiting()
+	{
+		return pleaseWait;
+	}
+	
+	public void setWaiting(boolean isWaiting)
+	{
+		pleaseWait = isWaiting;
 	}
 	
 	private static void genFlagTable(int[][] FLAG_ADD, int[][] FLAG_SUB, int[] FLAG_INC, int[] FLAG_DEC)
@@ -184,8 +215,12 @@ public class CPU implements Runnable
 					{
 						// Handle IO ports
 						case 0xFF10: //Channel 1, Sweep
-						snd.channel1.setSweep(val);
-						break;
+							snd.channel1.setSweep(val);
+							break;
+						case 0xFF11: //Channel 1, Length/Wave Duty
+							snd.channel1.setDutyCycle(val);
+							snd.channel1.setLength(val);
+							break;
 						
 						default: return 0;
 					}
@@ -266,6 +301,15 @@ public class CPU implements Runnable
 				
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
+			// Check if should wait
+			synchronized (this) {
+		    	while (pleaseWait) {
+			    	try {
+			        	wait();
+			        } catch (Exception e) {}
+			    }
+			}
+			
 				if(readMem(PC)!=0xCB)
 					System.out.format("Operation 0x%02X at %X\n",readMem(PC),PC);
 				else
