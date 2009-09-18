@@ -162,6 +162,7 @@ public class GUI
 }
 class FileMenu extends Menu implements ActionListener {
 	Frame mw;
+		
 	public FileMenu(Frame m){
 		super("File");
 		mw = m;
@@ -258,6 +259,8 @@ class FileMenu extends Menu implements ActionListener {
 				}
 			else
 				System.out.println("No Thread Running");
+			System.exit(0); //messy, probably should pass this a window event
+							//not that I know how... :x
 		}
 		else
 			System.out.println("Selected FileMenu " + item); 
