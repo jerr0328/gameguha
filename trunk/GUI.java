@@ -5,9 +5,17 @@ import java.util.*; // random colors look cool! but slow to generate
 
 public class GUI
 {
-	private int screenWidth = 160*4;
-	private int screenHeight = 144*4;
-	private CPU cpu;
+	private static final int screenWidth = 160;
+	private static final int screenHeight = 144;
+	private static CPU cpu;
+	private static Graphics g;
+	private static BufferedImage screen;
+	private static int[] imgBuffer;
+	private static int zoom;
+	private static int delayZoom;
+	private static Frame frame;
+	private static Insets ins;
+	private static Random gen;
 	
 	public static void main(String[] args)
 	{
@@ -16,15 +24,16 @@ public class GUI
 	
 	public void go()
 	{
-    	Frame frame = new Frame("GameGuha");
+    	frame = new Frame("GameGuha");
     	MenuBar mb = new MenuBar();
     	mb.add(new FileMenu(frame));
-    	mb.add(new SoundMenu(frame));
+    	mb.add(new ViewMenu());
+    	mb.add(new SoundMenu());
     	frame.setMenuBar(mb);
     	
 		frame.setVisible(true); 
 	
-		Insets ins = frame.getInsets();
+		ins = frame.getInsets();
 		System.out.printf("top:%d bot:%d left:%d right:%d\n", ins.top, ins.bottom, ins.left, ins.right);
 		frame.setSize(screenWidth + ins.left + ins.right, screenHeight + ins.top + ins.bottom); 
 			
@@ -36,136 +45,183 @@ public class GUI
      		}
 		});
 		
-		Graphics g = frame.getGraphics();
-		BufferedImage screen = new BufferedImage(screenWidth,screenHeight,BufferedImage.TYPE_INT_RGB);
-		int[] buffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
+		g = frame.getGraphics();
 		
-		Random gen = new Random();
+		screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
+		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
+
+		gen = new Random();
 		int frames = 0;
 		long startT = System.nanoTime();
+		
+		zoom = 1;
+		delayZoom = 1;
 
-		while(frames < 0) // change back to while(true) for pretty colors
+		while(true)
 		{
 			frames++;
-			
 			if (frames == 60)
 			{
-			//	System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
+				//System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
 				frames = 0;
 				startT = System.nanoTime();
 			}
 			
-			int xPixel, x, yPixel, y1 = 0, y2 = -320, y3 = -480, y4 = -640;
-			
-			/* 1x Zoom
-			for(yPixel = 0; yPixel < 144; yPixel++)
-			{
-				for (xPixel = 0; xPixel < 160; xPixel++)
-				{
-					buffer[xPixel+y1] = 0x0000FF00;
-				}
-				y1 += 160;
-			}
-			*/
-			
-			/* 2x Zoom
-			for(yPixel = 0; yPixel < 144; yPixel++)
-			{
-				y1 = y2+320;
-				y2 = y1+320;
-				
-				for (x = 0; x < 320; x++)
-				{
-					xPixel = x >> 1;
-
-					buffer[x + y1] = 0x0000FF00;
-					buffer[x + y2] = 0x0000FF00;
-					
-					x++;
-					
-					buffer[x + y1] = 0x0000FF00;
-					buffer[x + y2] = 0x0000FF00;
-				}
-			}
-			*/
-			
-			/* 3x Zoom
-			for(yPixel = 0; yPixel < 144; yPixel++)
-			{
-				y1 = y3+480;
-				y2 = y1+480;
-				y3 = y2+480;
-				x = 0;
-				
-				for (xPixel = 0; xPixel < 160; xPixel++)
-				{
-					buffer[x + y1] = 0x0000FF00;
-					buffer[x + y2] = 0x0000FF00;
-					buffer[x + y3] = 0x0000FF00;
-					
-					x++;
-					
-					buffer[x + y1] = 0x0000FF00;
-					buffer[x + y2] = 0x0000FF00;
-					buffer[x + y3] = 0x0000FF00;
-					
-					x++;
-					
-					buffer[x + y1] = 0x0000FF00;
-					buffer[x + y2] = 0x0000FF00;
-					buffer[x + y3] = 0x0000FF00;
-					
-					x++;
-				}
-			}
-			*/
-			
-			for(yPixel = 0; yPixel < 144; yPixel++)
-			{
-				y1 = y4+640;
-				y2 = y1+640;
-				y3 = y2+640;
-				y4 = y3+640; 
-				
-				for (x = 0; x < 640; x++)
-				{
-					xPixel = x >> 2;
-					
-					int randCol = gen.nextInt();
-
-					buffer[x + y1] = randCol;
-					buffer[x + y2] = randCol;
-					buffer[x + y3] = randCol;
-					buffer[x + y4] = randCol;
-					
-					x++;
-					
-					buffer[x + y1] = randCol;
-					buffer[x + y2] = randCol;
-					buffer[x + y3] = randCol;
-					buffer[x + y4] = randCol;;
-					
-					x++;
-					
-					buffer[x + y1] = randCol;
-					buffer[x + y2] = randCol;
-					buffer[x + y3] = randCol;
-					buffer[x + y4] = randCol;
-					
-					x++;
-					
-					buffer[x + y1] = randCol;
-					buffer[x + y2] = randCol;
-					buffer[x + y3] = randCol;
-					buffer[x + y4] = randCol;
-				}
-			}
-			
-			g.drawImage(screen,ins.left,ins.top,null); 
+			int[] arr = {0};
+			drawFrame(arr);
 		}
 	}
 	
-	class FileMenu extends Menu implements ActionListener {
+	public void drawFrame(int[] VRAM)
+	{
+		if (zoom != delayZoom)
+			changeZoom();
+		
+		int[] buffer = imgBuffer;
+				
+		int xPixel, yPixel, randCol;
+		
+		switch (zoom)
+		{
+			case 1:
+				int y1 = 0;
+				for(yPixel = 0; yPixel < 144; yPixel++)
+				{
+					for (xPixel = 0; xPixel < 160; xPixel++)
+					{
+						randCol = gen.nextInt();
+						
+						buffer[xPixel+y1] = randCol;
+					}
+					y1 += 160;
+				}
+			break;
+			
+			case 2:
+				int x;
+				int y2 = -(screenWidth*2);
+				for(yPixel = 0; yPixel < 144; yPixel++)
+				{
+					y1 = y2+320;
+					y2 = y1+320;
+					
+					for (x = 0; x < 320; x++)
+					{
+						randCol = gen.nextInt();
+						
+						xPixel = x >> 1;
+	
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+					}
+				}
+			break;
+			
+			case 3:
+				int y3 = -(screenWidth*3);
+				for(yPixel = 0; yPixel < 144; yPixel++)
+				{
+					y1 = y3+480;
+					y2 = y1+480;
+					y3 = y2+480;
+					x = 0;
+					
+					for (xPixel = 0; xPixel < 160; xPixel++)
+					{
+						randCol = gen.nextInt();
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						
+						x++;
+					}
+				}
+			break;
+			
+			case 4:
+				int y4 = -(screenWidth*4);
+				for(yPixel = 0; yPixel < 144; yPixel++)
+				{
+					y1 = y4+640;
+					y2 = y1+640;
+					y3 = y2+640;
+					y4 = y3+640; 
+					
+					for (x = 0; x < 640; x++)
+					{
+						xPixel = x >> 2;
+						
+						randCol = gen.nextInt();
+	
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						buffer[x + y4] = randCol;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						buffer[x + y4] = randCol;;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						buffer[x + y4] = randCol;
+						
+						x++;
+						
+						buffer[x + y1] = randCol;
+						buffer[x + y2] = randCol;
+						buffer[x + y3] = randCol;
+						buffer[x + y4] = randCol;
+					}
+				}
+			break;
+			
+			default: throw new AssertionError("Zoom mode not supported");
+		}
+		
+		g.drawImage(screen, ins.left, ins.top, null);
+	}
+	
+	public void setZoom(int delayZoom)
+	{
+		this.delayZoom = delayZoom;
+	}
+	
+	private void changeZoom()
+	{
+		zoom = delayZoom;
+		
+		frame.setSize(screenWidth*zoom + ins.left + ins.right, screenHeight*zoom + ins.top + ins.bottom); 
+		
+		screen = new BufferedImage(screenWidth*zoom, screenHeight*zoom, BufferedImage.TYPE_INT_RGB);
+		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
+	}	
+	
+	private class FileMenu extends Menu implements ActionListener {
 		Frame mw;
 			
 		public FileMenu(Frame m){
@@ -177,7 +233,7 @@ public class GUI
 		 	add(mi = new MenuItem("Run"));
 			mi.addActionListener(this);
 			add(mi = new MenuItem("Pause"));
-				mi.addActionListener(this);
+			mi.addActionListener(this);
 		    add(mi = new MenuItem("Exit")); 
 		    mi.addActionListener(this); 
 	
@@ -272,11 +328,72 @@ public class GUI
 		} 
 	}
 	
-	class SoundMenu extends Menu implements ActionListener {
-		Frame mw;
-		public SoundMenu(Frame m){
+	private class ViewMenu extends Menu implements ItemListener
+	{
+		private CheckboxMenuItem zoom1;
+		private CheckboxMenuItem zoom2;
+		private CheckboxMenuItem zoom3;
+		private CheckboxMenuItem zoom4;
+		
+		public ViewMenu()
+		{
+			super("View");
+			
+			add(zoom1 = new CheckboxMenuItem("Zoom 1x",true));
+		    zoom1.addItemListener(this); 
+		    add(zoom2 = new CheckboxMenuItem("Zoom 2x")); 
+		    zoom2.addItemListener(this); 
+		    add(zoom3 = new CheckboxMenuItem("Zoom 3x")); 
+		    zoom3.addItemListener(this); 
+		    add(zoom4 = new CheckboxMenuItem("Zoom 4x")); 
+			zoom4.addItemListener(this); 
+		}
+		
+		public void itemStateChanged(ItemEvent e)
+		{ 
+			System.out.println(e.paramString());
+			
+			if (e.getItemSelectable() == zoom1)
+			{
+				zoom1.setState(true);
+				zoom2.setState(false);
+				zoom3.setState(false);
+				zoom4.setState(false);
+				setZoom(1);
+			}
+			else if (e.getItemSelectable() == zoom2)
+			{
+				zoom1.setState(false);
+				zoom2.setState(true);
+				zoom3.setState(false);
+				zoom4.setState(false);
+				setZoom(2);
+			}
+			else if (e.getItemSelectable() == zoom3)
+			{
+				zoom1.setState(false);
+				zoom2.setState(false);
+				zoom3.setState(true);
+				zoom4.setState(false);
+				setZoom(3);
+			}
+			else if (e.getItemSelectable() == zoom4)
+			{
+				zoom1.setState(false);
+				zoom2.setState(false);
+				zoom3.setState(false);
+				zoom4.setState(true);
+				setZoom(4);
+			}
+		}
+	}
+	
+	// This is broken: see my ViewMenu for a correct example of handling CheckBoxMenuItems
+	private class SoundMenu extends Menu implements ActionListener {
+		//Frame mw;
+		public SoundMenu(){
 			super("Sound");
-			mw = m;
+			//mw = m;
 			MenuItem mi; 
 			add(mi = new CheckboxMenuItem("Sound Enable",true));
 		    mi.addActionListener(this); 
@@ -292,6 +409,7 @@ public class GUI
 		public void actionPerformed(ActionEvent e) { 
 			String item = e.getActionCommand(); 
 			if (item.equals("Sound Enable")){
+				System.out.println("***");
 				// Toggle sound
 			}
 			else if(item.equals("Channel 1")){
