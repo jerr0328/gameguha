@@ -3,7 +3,7 @@ import java.awt.image.*;
 import java.awt.event.*;
 import java.util.*; // random colors look cool! but slow to generate
 
-public class GUI
+public class GUI implements KeyListener
 {
 	private static final int screenWidth = 160;
 	private static final int screenHeight = 144;
@@ -16,6 +16,14 @@ public class GUI
 	private static Frame frame;
 	private static Insets ins;
 	private static Random gen;
+	private static boolean buttonLEFT = false;
+	private static boolean buttonRIGHT = false;
+	private static boolean buttonUP = false;
+	private static boolean buttonDOWN = false;
+	private static boolean buttonA = false;
+	private static boolean buttonB = false;
+	private static boolean buttonSTART = false;
+	private static boolean buttonSELECT = false;
 	
 	public static void main(String[] args)
 	{
@@ -31,7 +39,11 @@ public class GUI
     	mb.add(new SoundMenu());
     	frame.setMenuBar(mb);
     	
+		frame.setResizable(false);
 		frame.setVisible(true); 
+		
+		frame.addKeyListener(this);
+		
 	
 		ins = frame.getInsets();
 		System.out.printf("top:%d bot:%d left:%d right:%d\n", ins.top, ins.bottom, ins.left, ins.right);
@@ -215,12 +227,94 @@ public class GUI
 	{
 		zoom = delayZoom;
 		
-		frame.setSize(screenWidth*zoom + ins.left + ins.right, screenHeight*zoom + ins.top + ins.bottom); 
+		frame.setSize(screenWidth*zoom + ins.left + ins.right, screenHeight*zoom + ins.top + ins.bottom);
+		g = frame.getGraphics();
 		
 		screen = new BufferedImage(screenWidth*zoom, screenHeight*zoom, BufferedImage.TYPE_INT_RGB);
 		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
 	}	
 	
+	//This will register which keys are being pressed and released.
+	public void keyPressed(KeyEvent key)
+	{
+	   
+	   if(key.getKeyCode() == KeyEvent.VK_LEFT)
+		   buttonLEFT = true;
+	   if(key.getKeyCode() == KeyEvent.VK_RIGHT)
+		   buttonRIGHT = true;
+		if(key.getKeyCode() == KeyEvent.VK_UP)
+		   buttonUP = true;
+		if(key.getKeyCode() == KeyEvent.VK_DOWN)
+		   buttonDOWN = true;
+		if(key.getKeyCode() == KeyEvent.VK_X)
+		   buttonA = true;
+		if(key.getKeyCode() == KeyEvent.VK_Z)
+		   buttonB = true;
+		if(key.getKeyCode() == KeyEvent.VK_ENTER)
+		   buttonSTART = true;
+		if(key.getKeyCode() == KeyEvent.VK_SPACE)
+		   buttonSELECT = true;
+	}
+	
+	public void keyReleased(KeyEvent key)
+	{
+	   if(key.getKeyCode() == KeyEvent.VK_LEFT)
+		   buttonLEFT = false;
+	   if(key.getKeyCode() == KeyEvent.VK_RIGHT)
+		   buttonRIGHT = false;
+		if(key.getKeyCode() == KeyEvent.VK_UP)
+		   buttonUP = false;
+		if(key.getKeyCode() == KeyEvent.VK_DOWN)
+		   buttonDOWN = false;
+		if(key.getKeyCode() == KeyEvent.VK_X)
+		   buttonA = false;
+		if(key.getKeyCode() == KeyEvent.VK_Z)
+		   buttonB = false;
+		if(key.getKeyCode() == KeyEvent.VK_ENTER)
+		   buttonSTART = false;
+		if(key.getKeyCode() == KeyEvent.VK_SPACE)
+		   buttonSELECT = false;
+	}
+	
+	public void keyTyped(KeyEvent key){ //empty method cause I need it <dumb>
+	}
+	
+	//Next 8 methods all retrieve the booleans for the 8 buttons.
+	public boolean getUp()
+	{
+	   return buttonUP;
+	}
+	public boolean getDown()
+	{
+	   return buttonDOWN;
+	}
+	public boolean getLeft()
+	{
+	   return buttonLEFT;
+	}
+	public boolean getRight()
+	{
+	   return buttonRIGHT;
+	}
+	public boolean getA()
+	{
+	   return buttonA;
+	}
+	public boolean getB()
+	{
+	   return buttonB;
+	}
+	public boolean getStart()
+	{
+	   return buttonSTART;
+	}
+	public boolean getSelect()
+	{
+	   return buttonSELECT;
+	}
+	
+	
+	//End of the key registering stuff. 	
 	private class FileMenu extends Menu implements ActionListener {
 		Frame mw;
 			
