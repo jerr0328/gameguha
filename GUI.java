@@ -237,43 +237,78 @@ public class GUI implements KeyListener
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
-	   
-	   if(key.getKeyCode() == KeyEvent.VK_LEFT)
-		   buttonLEFT = true;
-	   if(key.getKeyCode() == KeyEvent.VK_RIGHT)
-		   buttonRIGHT = true;
-		if(key.getKeyCode() == KeyEvent.VK_UP)
-		   buttonUP = true;
-		if(key.getKeyCode() == KeyEvent.VK_DOWN)
-		   buttonDOWN = true;
-		if(key.getKeyCode() == KeyEvent.VK_X)
-		   buttonA = true;
-		if(key.getKeyCode() == KeyEvent.VK_Z)
-		   buttonB = true;
-		if(key.getKeyCode() == KeyEvent.VK_ENTER)
-		   buttonSTART = true;
-		if(key.getKeyCode() == KeyEvent.VK_SPACE)
-		   buttonSELECT = true;
+	   switch(key.getKeyCode())
+		{
+		   case KeyEvent.VK_LEFT:
+			   buttonLEFT = true;
+			break;
+			
+			case KeyEvent.VK_RIGHT:
+			   buttonRIGHT = true;
+			break;
+			
+			case KeyEvent.VK_UP:
+			   buttonUP = true;
+			break;
+			
+			case KeyEvent.VK_DOWN:
+			   buttonDOWN = true;
+			break;
+			
+			case KeyEvent.VK_X:
+			   buttonA = true;
+			break;
+			
+			case KeyEvent.VK_Z:
+			   buttonB = true;
+			break;
+			
+			case KeyEvent.VK_ENTER:
+			   buttonSTART = true;
+			break;
+			
+			case KeyEvent.VK_SPACE:
+			   buttonSELECT = true;
+			break;  
+		}
 	}
 	
 	public void keyReleased(KeyEvent key)
 	{
-	   if(key.getKeyCode() == KeyEvent.VK_LEFT)
-		   buttonLEFT = false;
-	   if(key.getKeyCode() == KeyEvent.VK_RIGHT)
-		   buttonRIGHT = false;
-		if(key.getKeyCode() == KeyEvent.VK_UP)
-		   buttonUP = false;
-		if(key.getKeyCode() == KeyEvent.VK_DOWN)
-		   buttonDOWN = false;
-		if(key.getKeyCode() == KeyEvent.VK_X)
-		   buttonA = false;
-		if(key.getKeyCode() == KeyEvent.VK_Z)
-		   buttonB = false;
-		if(key.getKeyCode() == KeyEvent.VK_ENTER)
-		   buttonSTART = false;
-		if(key.getKeyCode() == KeyEvent.VK_SPACE)
-		   buttonSELECT = false;
+	   switch(key.getKeyCode())
+		{
+		   case KeyEvent.VK_LEFT:
+			   buttonLEFT = false;
+			break;
+			
+			case KeyEvent.VK_RIGHT:
+			   buttonRIGHT = false;
+			break;
+			
+			case KeyEvent.VK_UP:
+			   buttonUP = false;
+			break;
+			
+			case KeyEvent.VK_DOWN:
+			   buttonDOWN = false;
+			break;
+			
+			case KeyEvent.VK_X:
+			   buttonA = false;
+			break;
+			
+			case KeyEvent.VK_Z:
+			   buttonB = false;
+			break;
+			
+			case KeyEvent.VK_ENTER:
+			   buttonSTART = false;
+			break;
+			
+			case KeyEvent.VK_SPACE:
+			   buttonSELECT = false;
+			break;  
+		}
 	}
 	
 	public void keyTyped(KeyEvent key){ //empty method cause I need it <dumb>
