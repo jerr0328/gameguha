@@ -5,7 +5,7 @@ public class ROMtest {
         ROM rom = new ROM(args[0]);
         rom.printTitle();
         rom.printCartType();
-		rom.printRAMSize();
+		rom.getRAMSize();
         System.out.print("Color: ");
         if(rom.isCGB())
             System.out.println("Yes");

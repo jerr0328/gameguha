@@ -8,7 +8,9 @@ public class ROM{
 	
 	private int selectedBank = 0; // Selected memory bank -implement function-
 	static final int bankSize = 0x4000;
-	public int banks[][];
+	static final int ramSize = 0x2000;
+	public int rom[][];
+	public int ram[][];
 	
 	// String constructor (usually for testing)
 	public ROM(String filename){
@@ -29,49 +31,48 @@ public class ROM{
 				firstBank[i] = buf.read();
 			}
 		
-		int numBanks = printROMSize(firstBank);
-		banks = new int[numBanks][bankSize];
-		
-		for(int j = 1 ; j < numBanks; j++)
+			int numBanks = getROMSize(firstBank);
+			rom = new int[numBanks][bankSize];
+			int numRAMBanks = getRAMSize();
+			if(numRAMBanks != 0)
+				ram = new int[numRAMBanks][];
+			
+			for(int j = 1 ; j < numBanks; j++)
+				for(int i = 0; i < 0x4000; i++)
+				{
+					rom[j][i] = buf.read();
+				}
 			for(int i = 0; i < 0x4000; i++)
 			{
-				banks[j][i] = buf.read();
+				rom[0][i] = firstBank[i];
 			}
-		for(int i = 0; i < 0x4000; i++)
-		{
-			banks[0][i] = firstBank[i];
-		}
-			
+				
 			buf.close();
 		}
 		catch(Exception e){ e.printStackTrace(); }
 		
 	}
 	
-	public int getMem(int index)
-	{
-		return banks[selectedBank][index];
-	}
-	
 	public int[] getDefaultROM()
 	{
-		return banks[0];
+		return rom[0];
 	}
 	
 	public int[] getROM(int bank)
 	{
-		return banks[bank];
+		return rom[bank];
 	}
 	
 	public int[] getRAM(int bank)
 	{
-		// implement later
-		return null;
+		if(ram == null)
+			return null;
+		return ram[bank];
 	}
 	
 	// Returns true if the ROM is a Color GB
 	public boolean isCGB(){
-		if(banks[0][0x0143]==0){
+		if(rom[0][0x0143]==0){
 			return false;
 		}
 		return true;
@@ -80,7 +81,7 @@ public class ROM{
 	// Prints cartridge type, as specified in docs
 	public void printCartType(){
 		String out="";
-		switch(banks[0][0x0147]){
+		switch(rom[0][0x0147]){
 			case 0x0: out="0 ROM ONLY"; break;
 			case 0x1: out="1 ROM+MBC1"; break;
 			case 0x2: out="2 ROM+MBC1+RAM"; break;
@@ -107,8 +108,8 @@ public class ROM{
 		}
 		System.out.println("Cartridge type: "+out);
 	}
-	// Prints ROM size, as specified in docs
-	public int printROMSize(int bank[]){
+	// Returns ROM size, as specified in docs
+	public int getROMSize(int bank[]){
 		String out="";
 		int numBanks=0;
 		switch(bank[0x148]){
@@ -129,17 +130,19 @@ public class ROM{
 		return numBanks;
 	}
 	
-	public void printRAMSize(){
+	public int getRAMSize(){
 		String out="";
-		switch(banks[0][0x149]){
+		int numBanks=0;
+		switch(rom[0][0x149]){
 			case 0x0: out="no RAM"; break;
-			case 0x1: out="2KB RAM"; break;
-			case 0x2: out="8KB RAM"; break;
-			case 0x3: out="32KB RAM (8x4)"; break;
-			case 0x4: out="128KB RAM (8x16)"; break;
+			case 0x1: out="2KB RAM"; numBanks=1; break;
+			case 0x2: out="8KB RAM"; numBanks=1; break;
+			case 0x3: out="32KB RAM (8x4)"; numBanks=4; break;
+			case 0x4: out="128KB RAM (8x16)"; numBanks=16; break;
 		
 		}
 		System.out.println("RAM Size: "+out);
+		return numBanks;
 	}
 
 	// Verify checksum of ROM, prints result
@@ -157,7 +160,7 @@ public class ROM{
 		int x=0;
 		
 		while (ptr <= 0x0133){
-			if(banks[0][ptr]!=nintyBitmap[ptr-0x0104])
+			if(rom[0][ptr]!=nintyBitmap[ptr-0x0104])
 				{
 					System.out.println("Bitmap Invalid");
 					System.out.println("Header Checksum Invalid");
@@ -170,9 +173,9 @@ public class ROM{
 			//x=0:FOR i=0134h TO 014Ch:x=x-MEM[i]-1:NEXT
 	  		for(;ptr<=0x014C;ptr++)
 			{
-				x=x-banks[0][ptr]-1; //checksum algorithm
+				x=x-rom[0][ptr]-1; //checksum algorithm
 			}
-			if((x&0xFF) == banks[0][ptr]){
+			if((x&0xFF) == rom[0][ptr]){
 				System.out.println("Header Checksum Valid");
 				return true;
 			}
@@ -184,21 +187,15 @@ public class ROM{
 	
 	// Prints game title
 	public void printTitle(){
-		System.out.print("ROM Title: ");
-		int ptr=0x0134;
-		while(ptr < 0x0143 && banks[0][ptr]!=0){
-			System.out.print((char)banks[0][ptr]);
-			ptr++;
-		}
-		System.out.println();
+		System.out.printf("ROM Title: %s\n",getTitle());
 	}
 	
 	public String getTitle(){
 		StringBuffer sb = new StringBuffer();
 		int ptr=0x0134;
-		while(ptr <0x0143 && banks[0][ptr]!=0){
-		sb.append((char)banks[0][ptr]);
-		ptr++;
+		while(ptr <0x0143 && rom[0][ptr]!=0){
+			sb.append((char)rom[0][ptr]);
+			ptr++;
 		}
 		return sb.toString();
 	}
