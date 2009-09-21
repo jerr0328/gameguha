@@ -74,7 +74,7 @@ public class GUI implements KeyListener
 			frames++;
 			if (frames == 60)
 			{
-				//System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
+				System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
 				frames = 0;
 				startT = System.nanoTime();
 			}
@@ -378,7 +378,7 @@ public class GUI implements KeyListener
 					ROM rom = new ROM(f.getDirectory()+file);
 			        rom.printTitle();
 			        rom.printCartType();
-					rom.printRAMSize();
+					rom.getRAMSize();
 			        System.out.print("Color: ");
 			        if(rom.isCGB())
 			            System.out.println("Yes");
