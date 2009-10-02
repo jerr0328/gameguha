@@ -235,6 +235,17 @@ public class CPU extends Thread
 							snd.channel1.setDutyCycle(val);
 							snd.channel1.setLength(val);
 							break;
+						case 0xFF12: //Channel 1, Volume Envelope
+							snd.channel1.setEnvelope(val);
+							break;
+						case 0xFF13: //Channel 1, Low 8 Frequency
+							snd.channel1.setFrequencyLo(val);
+							index=0xFF14;
+							break;
+						case 0xFF14: //Channel 1, High 3 Frequency
+							snd.channel1.setFrequencyHi(val);
+							index=0xFF13;
+							break;
 						
 						default: return 0;
 					}
