@@ -9,6 +9,13 @@ class SquareWaveGen{
 	int sampleRate;
 	int dutyCycle;
 	int sndLen;
+	int volInitial;
+	boolean volDec;
+	int sweepEnv;
+	int frequency;
+	int counterSweep;
+	boolean counterExpire;
+	
 	
 	public SquareWaveGen(int rate)
 	{
@@ -44,6 +51,39 @@ class SquareWaveGen{
 			sndLen=1;
 		else
 			sndLen = (64-val) * (1/256);
+	}
+	
+	public void setEnvelope(int val)
+	{
+		volInitial = val & (CPU.BIT7 | CPU.BIT6 | CPU.BIT5 | CPU.BIT4);
+		volDec = (val & CPU.BIT3) != 0;
+		sweepEnv = val & (CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
+		
+		if(sweepEnv == 0)
+			volInitial = 0;
+	}
+	
+	public void setFrequencyLo(int val)
+	{
+		frequency = val << 8; // Low 8
+		
+	}
+	
+	public void setFrequencyHi(int val)
+	{
+		frequency = val & (CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
+		counterSweep = val & CPU.BIT6;
+		if(counterSweep == 1)
+			counterExpire = true;
+		if((val & CPU.BIT7)==1)
+			setLength(1);
+		
+		
+	}
+	
+	public void setFrequency()
+	{
+		
 	}
 }
 
