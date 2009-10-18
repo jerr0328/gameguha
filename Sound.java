@@ -3,88 +3,104 @@ import java.io.*;
 import javax.sound.sampled.*;
 
 class SquareWaveGen{
-	int sweepTime;
-	boolean sweepDec;
-	int sweepNum;
-	int sampleRate;
+	
+	final static int CHAN_LEFT = 1;
+	final static int CHAN_RIGHT = 2;
+	final static int CHAN_MONO = 4;
+	
+	int sampleRate; // starting sampleRate
+	final double lenDiv = 1/256.0;
+	
 	int dutyCycle;
-	int sndLen;
-	int volInitial;
-	boolean volDec;
-	int sweepEnv;
+	double soundLength;
+	int initialVolume;
+	int envelopeDirection;
+	int envelopeSweep;
+	int amplitude;
 	int frequency;
-	int counterSweep;
-	boolean counterExpire;
-	
-	
-	public SquareWaveGen(int rate)
+	int counterSelect;
+	int cycleLength;
+	int channel;
+
+	public SquareWaveGen(int sampleRate)
 	{
-		rate=sampleRate;
+		this.sampleRate = sampleRate;
+		channel = CHAN_LEFT | CHAN_RIGHT;
+		dutyCycle = 4;
+		soundLength = 0;
+		amplitude = 32;
+		
 	}
-	
-	public void setSweep(int val)
+
+	public void setSoundLength(int len)
 	{
-		sweepTime = val & (CPU.BIT6 | CPU.BIT5 | CPU.BIT4);
-		sweepDec = (val & CPU.BIT3) != 0;
-		sweepNum = (val & CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
+		if(len == -1)
+		soundLength = -1;
+		
+		soundLength = (64 - len) * lenDiv;
 	}
-	
-	public void setDutyCycle(int val) 
+
+	public void setWavePatternDuty(int duty)
 	{
-		val&= (CPU.BIT6 | CPU.BIT7);
-		switch(val) //these are in 8ths 
+		switch(duty)
 		{
-			case 0: dutyCycle = 1; //12.5%
+			case 0: dutyCycle = 1;
 				break;
-			case 1: dutyCycle = 2; //25%
+			case 1: dutyCycle = 2;
 				break;
-			case 2: dutyCycle = 4; //50%
+			case 2: dutyCycle = 4;
 				break;
-			case 3: dutyCycle = 6; //75%
+			case 3: dutyCycle = 6;
+				break;
 		}
 	}
-	
-	public void setLength(int val)
+
+	public void setVolumeEnvelope(int initVol, int envDir, int envSweep)
 	{
-		val&= (CPU.BIT0 | CPU.BIT1 | CPU.BIT2 | CPU.BIT3 | CPU.BIT4 | CPU.BIT5);
-		if(val==-1)
-			sndLen=1;
-		else
-			sndLen = (64-val) * (1/256);
+		initialVolume = initVol;
+		envelopeDirection = envDir;
+		envelopeSweep = envSweep;
+		
+		amplitude = initVol * 2;
 	}
 	
-	public void setEnvelope(int val)
+	public void setCounter(int val)
 	{
-		volInitial = val & (CPU.BIT7 | CPU.BIT6 | CPU.BIT5 | CPU.BIT4);
-		volDec = (val & CPU.BIT3) != 0;
-		sweepEnv = val & (CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
-		
-		if(sweepEnv == 0)
-			volInitial = 0;
+		counterSelect = val;
+	}
+
+	public void setFrequencyLo(int freq)
+	{
+		frequency = (frequency & 0xFF) | freq;
+		setFrequency(frequency);
 	}
 	
-	public void setFrequencyLo(int val)
+	public void setFrequencyHi(int freq)
 	{
-		frequency = val << 8; // Low 8
-		
+		frequency = (frequency & ~0x700) | ((freq & 0x07)<<8);
+		setFrequency(frequency);
 	}
 	
-	public void setFrequencyHi(int val)
+	public void setFrequency(int frequency)
 	{
-		frequency = val & (CPU.BIT2 | CPU.BIT1 | CPU.BIT0);
-		counterSweep = val & CPU.BIT6;
-		if(counterSweep == 1)
-			counterExpire = true;
-		if((val & CPU.BIT7)==1)
-			setLength(1);
-		
-		
-	}
-	
-	public void setFrequency()
-	{
-		
-	}
+		try{
+			float gbFrequency = 131072 >> 11;
+
+			if(frequency != 2048){
+				gbFrequency = ((float) 131072 / (float) (2048 - frequency));
+			}
+			this.frequency = frequency;
+			if(frequency != 0)
+			{
+				cycleLength = (256 * sampleRate) / (int) gbFrequency;
+			}
+			else
+			{
+			cycleLength = 65535;
+		}
+		if(cycleLength == 0) cycleLength =1;
+	} catch(ArithmeticException e){}
+}
 }
 
 class VoluntaryWaveGen{
@@ -99,7 +115,7 @@ class NoiseGen{
 public class Sound {
 	
 	SourceDataLine soundLine;
-	int defaultSampleRate = 44100;
+	int defaultSampleRate = 44100; // 44.1Khz
 	int defaultBufferLength = 200;
 	SquareWaveGen channel1;
 	SquareWaveGen channel2;
@@ -111,7 +127,38 @@ public class Sound {
 			
 	public Sound()
 	{
-		channel1 = new SquareWaveGen(defaultSampleRate);
+		soundLine = initSoundHardware();
+		channel2 = new SquareWaveGen(defaultSampleRate);
 	}
+	
+	public SourceDataLine initSoundHardware() 
+	{
+		try 
+		{
+			AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
+			defaultSampleRate,8,2,2,defaultSampleRate, true);
+			DataLine.Info lineInfo = new DataLine.Info(SourceDataLine.class,format);
 			
-}
+			if(!AudioSystem.isLineSupported(lineInfo))
+			{
+				System.out.println("Can't find Audio Output System");
+				soundEnabled = false;
+			}
+			else
+			{
+				SourceDataLine line = (SourceDataLine) AudioSystem.getLine(lineInfo);
+				
+				int bufferLength = (defaultSampleRate / 1000) * defaultBufferLength;
+				line.open(format, bufferLength);
+				line.start();
+				soundEnabled = true;
+				return line;
+			}
+			} catch (Exception e)
+			{
+				System.out.println("Error: Audio System Busy!");
+				soundEnabled = false;
+			}
+			return null;
+		}
+	}			
