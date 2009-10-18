@@ -46,15 +46,17 @@ public class CPU extends Thread
 	private int[] OAM;
 	private int[] IO;
 	
-	
+	private int P1; // $FF00
+	private int IF; // $FF0F
 	private int LCDC; // $FF40
 	private int SCY; // $FF42
 	private int SCX; // $FF43
 	private int LY; // $FF44
 	private int BGP; // $FF47
+	private int IE; // $FFFF
 	
 	private int[] HRAM;
-	private int IE;
+
 	
 	private ROM rom;
 	private GUI gui;
@@ -95,6 +97,11 @@ public class CPU extends Thread
 	public void setWaiting(boolean pleaseWait)
 	{
 		this.pleaseWait = pleaseWait;
+	}
+	
+	public void joypadInt()
+	{
+		IF &= BIT4;
 	}
 	
 	private static void genFlagTable(int[][] FLAG_ADD, int[][] FLAG_SUB, int[] FLAG_INC, int[] FLAG_DEC)
@@ -196,7 +203,10 @@ public class CPU extends Thread
 			case 0xFF:
 				switch(index)
 				{
-					// Handle IO ports
+					case 0xFF00:
+						return P1;
+					case 0xFF0F:
+						return IF;
 					case 0xFF40:
 						return LCDC;
 					case 0xFF42:
@@ -257,6 +267,8 @@ public class CPU extends Thread
 					switch(index)
 					{
 						// Handle IO ports
+						case 0xFF00: //Joypad
+							return (P1 = (val & 0xF0));
 						case 0xFF10: //Channel 1, Sweep
 							snd.channel1.setSweep(val);
 							break;
@@ -276,6 +288,8 @@ public class CPU extends Thread
 							index=0xFF13;
 							break;
 						
+						case 0xFF0F:
+							return (IF = val);
 						case 0xFF40:
 							return (LCDC = val);
 						case 0xFF42:
@@ -3735,15 +3749,60 @@ public class CPU extends Thread
 					
 					if (numCycles >= nextVBlank)
 					{
+						/*Button controls
+						 7    6      5       4       3     2     1    0
+						[NA][NA][Sel Btn][Sel Dir][D/St][U/Sel][L/B][R/A]*/
+						// Check for Joypad presses
+						// check 5 or 4
+						P1 |= 0x0F;
+						if((P1 & BIT5) == 0)
+						{
+						
+							if(gui.getStart())
+							{
+								P1 &= ~BIT3;
+								System.out.println("P1 is: " +Integer.toBinaryString(P1));
+							}
+					
+							else if(gui.getSelect())
+								P1 &= ~BIT2;
+							
+							else if(gui.getB())
+								P1 &= ~BIT1;
+							
+							else if(gui.getA())
+								P1 &= ~BIT0;
+						}
+						else if((P1 & BIT4) == 0)
+						{
+						
+							if(gui.getDown())
+								P1 &= ~BIT3;
+							
+							else if(gui.getUp())
+								P1 &= ~BIT2;
+					
+							else if(gui.getLeft())
+								P1 &= ~BIT1;
+					
+							else if(gui.getRight())
+								P1 &= ~BIT0;
+						}
+						
+						// HANDLE INTERRUPTS HERE
+					
 						//handle vb inter.
 						if (IME & ((IE & BIT0) != 0))
 						{
-							System.out.println("VBLANK");
+						//	System.out.println("VBLANK");
 							IME = false;
 							writeMem(--SP, PC >> 8);
 							writeMem(--SP, PC & 0x00FF);
 							PC = 0x0040;
 						}
+						
+						
+						// STOP HANDLING INTERRUPTS
 						
 						nextVBlank += CYCLES_PER_LINE*154;
 					}

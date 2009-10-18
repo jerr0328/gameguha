@@ -246,34 +246,42 @@ public class GUI implements KeyListener//, FrameListener
 		{
 		   case KeyEvent.VK_LEFT:
 			   buttonLEFT = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_RIGHT:
 			   buttonRIGHT = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_UP:
 			   buttonUP = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_DOWN:
 			   buttonDOWN = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_X:
 			   buttonA = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_Z:
 			   buttonB = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_ENTER:
 			   buttonSTART = true;
+				cpu.joypadInt();
 			break;
 			
 			case KeyEvent.VK_SPACE:
 			   buttonSELECT = true;
+				cpu.joypadInt();
 			break;  
 		}
 	}
