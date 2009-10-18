@@ -1,3 +1,5 @@
+//import javax.swing.event.*;
+
 public class CPU extends Thread
 {
 /*	private static class ThreadLocalWaiting extends ThreadLocal
@@ -18,6 +20,7 @@ public class CPU extends Thread
 			pleaseWait = isWaiting;
 		}
 	}*/
+	boolean[] visited = new boolean[0x10000];
 		
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
@@ -42,18 +45,30 @@ public class CPU extends Thread
 	private int[] RAM;
 	private int[] OAM;
 	private int[] IO;
+	
+	
+	private int LCDC; // $FF40
+	private int SCY; // $FF42
+	private int SCX; // $FF43
+	private int LY; // $FF44
+	private int BGP; // $FF47
+	
 	private int[] HRAM;
 	private int IE;
 	
 	private ROM rom;
+	private GUI gui;
 	private Sound snd = new Sound(); 
 	private int mbc = 0; // ROM only for now
 	private boolean pleaseWait;
 	private boolean halt;
 	
-	public CPU(ROM rom)
+	//private EventListenerList frameListeners = new EventListenerList();
+	
+	public CPU(ROM rom, GUI gui)
 	{
 		this.rom = rom;
+		this.gui = gui;
 		pleaseWait = false; // Not in a waiting state on first run
 		halt = false;
 	}
@@ -182,7 +197,21 @@ public class CPU extends Thread
 				switch(index)
 				{
 					// Handle IO ports
-					default: return 0;
+					case 0xFF40:
+						return LCDC;
+					case 0xFF42:
+						return SCY;
+					case 0xFF43:
+						return SCX;
+					case 0xFF44:
+						return LY;
+					case 0xFF47:
+						return BGP;
+					case 0xFFFF:
+						return IE;
+					
+					default:
+						return HRAM[index-0xFF00];
 				}
 					
 			default: // echo internal RAM if in range [E000, FDFF]
@@ -247,7 +276,24 @@ public class CPU extends Thread
 							index=0xFF13;
 							break;
 						
-						default: return 0;
+						case 0xFF40:
+							return (LCDC = val);
+						case 0xFF42:
+							return (SCY = val);
+						case 0xFF43:
+							return (SCX = val);
+						case 0xFF44:
+							return (LY = val);
+						case 0xFF47:
+							return (BGP = val);
+						case 0xFFFF:
+							return (IE = val);
+						
+						default:
+						{
+							//System.out.printf("Writing %d to %4X\n", val, index);
+							return (HRAM[index-0xFF00] = val);
+						}
 					}
 					
 					default:
@@ -305,10 +351,12 @@ public class CPU extends Thread
 		ROMbank = rom.getROM(1);
 		VRAM = new int[0x2000];
 		RAMbank = rom.getRAM(0); // can be null
+		if (RAMbank == null)
+			RAMbank = new int[0x2000];
 		RAM = new int[0x2000];
 		OAM = new int[0x0100];
-		IO = new int[0x0080];
-		HRAM = new int[0x007F];
+		//IO = new int[0x0080];
+		HRAM = new int[0x0100];
 			
 		int[][] FLAG_ADD = new int[257][256]; // max 255 + 1 (carry) = 256;
 		int[][] FLAG_SUB = new int[257][256];
@@ -321,10 +369,21 @@ public class CPU extends Thread
 		int frameCount = 0;
 		int numCycles = 0;
 		int scanline = 0;
-		int nextHBlank = 114;
-		int nextVBlank = 114*144;	
+		int nextHBlank = CYCLES_PER_LINE;
+		int nextVBlank = CYCLES_PER_LINE*144;
+		int[] colorBG = new int[4];
+		int[] colorSP0 = new int[4];
+		int[] colorSP1 = new int[4];
+		int[] screen = new int[GUI.screenWidth * GUI.screenHeight];
+		
+		final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
 	
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
+		
+		/*for (int q = 0; q < 256; q++)
+		{
+			System.out.println(q + ": " + Integer.toBinaryString(FLAG_DEC[q]));
+		}*/
 		
 		long startT = System.nanoTime();
 		
@@ -344,13 +403,22 @@ public class CPU extends Thread
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
+				if (!visited[PC])
+				{
+			   		System.out.printf("Instruction %02X at %04X\n", readMem(PC), PC);
+			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
+			   		visited[PC] = true;
+				}
 			
-			/*
+				//if (PC > 0x219)
+				/*{
 				if(readMem(PC)!=0xCB)
-					System.out.format("Operation 0x%02X at %X\n",readMem(PC),PC);
+					System.out.format("Operation 0x%02X at 0x%04X\n",readMem(PC),PC);
 				else
-					System.out.format("Operation 0x%02X 0x%02X at %X\n",readMem(PC),readMem(PC+1),PC);
-					*/	
+					System.out.format("Operation 0x%02X 0x%02X at 0x%04X\n",readMem(PC),readMem(PC+1),PC);
+				}*/
+				//if (numCycles > 2000) return;
+				
 				switch(readMem(PC++))
 				{
 					case 0x00: //NOP
@@ -359,8 +427,8 @@ public class CPU extends Thread
 					
 					case 0x01: //LD BC,nn
 						numCycles+=3;
-						BREG = readMem(PC++);
 						CREG = readMem(PC++);
+						BREG = readMem(PC++);
 					break;
 					
 					case 0x02: //LD (BC),A
@@ -403,9 +471,9 @@ public class CPU extends Thread
 					
 					case 0x08: //LD (nn),SP
 						numCycles+=5;
-						index = ( readMem(PC++) << 8 ) | readMem(PC++);
-						writeMem(index, SP >> 8);
-						writeMem(index+1, SP & 0x00FF);
+						index = readMem(PC++) | (readMem(PC++) << 8);
+						writeMem(index, SP & 0x00FF);
+						writeMem(index+1, SP >> 8);
 					break;
 					
 					case 0x09: // ADD HL,BC
@@ -467,8 +535,8 @@ public class CPU extends Thread
 					
 					case 0x11: //LD DE,nn
 						numCycles+=3;
-						DREG = readMem(PC++);
 						EREG = readMem(PC++);
+						DREG = readMem(PC++);
 					break;
 					
 					case 0x12: //LD (DE),A
@@ -512,7 +580,7 @@ public class CPU extends Thread
 					
 					case 0x18: // JR n
 						numCycles+=3;
-						PC += (byte)readMem(PC++); // signed immediate
+						PC += (byte)readMem(PC) + 1; // signed immediate
 					break;
 					
 					case 0x19: // ADD HL,DE
@@ -571,7 +639,7 @@ public class CPU extends Thread
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=3;
-							PC += (byte)readMem(PC++); // signed immediate
+							PC += (byte)readMem(PC) + 1; // signed immediate
 						}
 						else
 						{
@@ -582,8 +650,8 @@ public class CPU extends Thread
 					
 					case 0x21: //LD HL,nn
 						numCycles+=3;
-						HREG = readMem(PC++);
 						LREG = readMem(PC++);
+						HREG = readMem(PC++);
 					break;
 					
 					case 0x22: //LDI (HL),A
@@ -660,7 +728,7 @@ public class CPU extends Thread
 						if ((FREG & ZERO) != 0)
 						{
 							numCycles+=3;
-							PC += (byte)readMem(PC++); // signed immediate
+							PC += (byte)readMem(PC) + 1; // signed immediate
 						}
 						else
 						{
@@ -728,7 +796,7 @@ public class CPU extends Thread
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=3;
-							PC += (byte)readMem(PC++); // signed immediate
+							PC += (byte)readMem(PC) + 1; // signed immediate
 						}
 						else
 						{
@@ -739,7 +807,7 @@ public class CPU extends Thread
 					
 					case 0x31: //LD SP,nn
 						numCycles+=3;
-						SP = ( ( readMem(PC++) << 8 ) | readMem(PC++) );
+						SP = readMem(PC++) | (readMem(PC++) << 8);
 					break;
 					
 					case 0x32: //LDD (HL),A
@@ -787,7 +855,7 @@ public class CPU extends Thread
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=3;
-							PC += (byte)readMem(PC++); // signed immediate
+							PC += (byte)readMem(PC) + 1; // signed immediate
 						}
 						else
 						{
@@ -1709,6 +1777,19 @@ public class CPU extends Thread
 					case 0xC9: // RET
 						numCycles+=4;
 						PC = readMem(SP++) | (readMem(SP++) << 8);
+					break;
+					
+					case 0xCA: // JP Z,nn
+						if ((FREG & ZERO) != 0)
+						{
+							numCycles+=4;
+							PC = readMem(PC) | (readMem(PC+1) << 8);
+						}
+						else
+						{
+							numCycles+=3;
+							PC+=2;
+						}
 					break;
 					
 					case 0xCB: // 2-byte opcodes
@@ -3582,15 +3663,89 @@ public class CPU extends Thread
 				
 				if (numCycles >= nextHBlank)
 				{
-					nextHBlank += 114;
+					if (scanline < GUI.screenHeight) //  && (LCDC & BIT0) != 0
+					{
+						//System.out.println("OMG!");
+						colorBG[0] = color[BGP & (BIT1 | BIT0)];
+						colorBG[1] = color[(BGP & (BIT3 | BIT2)) >> 2];
+						colorBG[2] = color[(BGP & (BIT5 | BIT4)) >> 4];
+						colorBG[3] = color[BGP >> 6];
+						
+						// Draw current scanline
+						int xPix = 0;
+						// x = SCX % 8
+						int x = SCX & 0x7;
+						// y = (SCY + scanline) % 8
+						int y = (SCY + scanline) & 0x7;
+						// crntVal = ((((SCY + scanline) % 256) / 8) * 32) * (SCX / 8)
+						int crntVal = ((((SCY + scanline) & 0xFF) >> 3) << 5) + (SCX >> 3);
+						// maxVal = ((crntVal + 32) / 32) * 32
+						int maxVal = (crntVal + 32) & ~0x1F;
+				outer:	for(;;)
+						{
+							//int tileNum;
+							//if ((LCDC & BIT3) != 0)
+							//	tileNum = VRAM[0x1C00 + crntVal];
+							//else
+							int tileNum = VRAM[0x1800 + ((LCDC & BIT3) << 7) + crntVal];
+							
+							int tileIndex;
+							
+							if ((LCDC & BIT4) != 0)
+							{
+							//System.out.println("**1**");
+								tileIndex = tileNum << 4; // tileNum * 16
+							}
+							else
+							{
+							//System.out.println("**2**");	
+								tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
+							}
+							
+							while (x < 8)
+							{
+								int bitPos = (y << 4) + x; // 16*y + x
+								int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+								int bitSet = (1 << (bitPos & 0x7)); // 1 << (bitPos%8)
+							//System.out.println("** " + tileNum);
+							//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
+								int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+								               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+								
+								screen[scanline*GUI.screenWidth + xPix] = colorBG[colorVal];
+								xPix++;
+								if (xPix >= GUI.screenWidth)
+									break outer;
+								x++;
+							}
+							
+							x = 0;
+							crntVal++;
+							if (crntVal >= maxVal)
+								crntVal -= 32;
+						}
+					}
+					// Finished drawing current scanline of bg/window
+
+					nextHBlank += CYCLES_PER_LINE;
 					
-					// draw scanline
-					scanline++;
+					LY = ++scanline;
+					
+					//System.out.println(PC);
 					
 					if (numCycles >= nextVBlank)
 					{
 						//handle vb inter.
-						nextVBlank += 114*154;
+						if (IME & ((IE & BIT0) != 0))
+						{
+							System.out.println("VBLANK");
+							IME = false;
+							writeMem(--SP, PC >> 8);
+							writeMem(--SP, PC & 0x00FF);
+							PC = 0x0040;
+						}
+						
+						nextVBlank += CYCLES_PER_LINE*154;
 					}
 					
 					if (numCycles >= 0x100000)
@@ -3602,6 +3757,9 @@ public class CPU extends Thread
 					
 					//DIVIDER = numCycles >> 6;
 					//TIMA = ...
+					
+					// V-Blank
+					//PC = 0x0040;
 				}
 				
 				/* old way + psuedo code
@@ -3642,8 +3800,10 @@ public class CPU extends Thread
 				*/
 			}
 			
+			gui.newFrame(screen);
+			
 			// Inform GUI class to render Gameboy's VRAM to screen
-			scanline = 0; // new frame
+			LY = scanline = 0; // new frame
 			frameCount++;
 			
 			if (frameCount == 100)
