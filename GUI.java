@@ -2,6 +2,7 @@ import java.awt.*;
 import java.awt.image.*;
 import java.awt.event.*;
 import java.util.*; // random colors look cool! but slow to generate
+import java.io.*;
 
 public class GUI implements KeyListener//, FrameListener
 {
@@ -14,6 +15,7 @@ public class GUI implements KeyListener//, FrameListener
 	private static int zoom;
 	private static int delayZoom;
 	private static Frame frame;
+	private static Frame keyframe;
 	private static Insets ins;
 	private static Random gen;
 	private static boolean buttonLEFT = false;
@@ -24,6 +26,14 @@ public class GUI implements KeyListener//, FrameListener
 	private static boolean buttonB = false;
 	private static boolean buttonSTART = false;
 	private static boolean buttonSELECT = false;
+	public static int keyLEFT = KeyEvent.VK_LEFT;
+	public static int keyRIGHT = KeyEvent.VK_RIGHT;
+	public static int keyUP = KeyEvent.VK_UP;
+	public static int keyDOWN = KeyEvent.VK_DOWN;
+	public static int keyA = KeyEvent.VK_X;
+	public static int keyB = KeyEvent.VK_Z;
+	public static int keySTART = KeyEvent.VK_ENTER;
+	public static int keySELECT = KeyEvent.VK_SPACE;
 	
 	public static void main(String[] args)
 	{
@@ -37,6 +47,7 @@ public class GUI implements KeyListener//, FrameListener
     	mb.add(new FileMenu(frame, this));
     	mb.add(new ViewMenu());
     	mb.add(new SoundMenu());
+		
     	frame.setMenuBar(mb);
     	
 		frame.setResizable(false);
@@ -242,86 +253,74 @@ public class GUI implements KeyListener//, FrameListener
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
-	   switch(key.getKeyCode())
+	   if(key.getKeyCode() == keyLEFT)
 		{
-		   case KeyEvent.VK_LEFT:
-			   buttonLEFT = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_RIGHT:
-			   buttonRIGHT = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_UP:
-			   buttonUP = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_DOWN:
-			   buttonDOWN = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_X:
-			   buttonA = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_Z:
-			   buttonB = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_ENTER:
-			   buttonSTART = true;
-				cpu.joypadInt();
-			break;
-			
-			case KeyEvent.VK_SPACE:
-			   buttonSELECT = true;
-				cpu.joypadInt();
-			break;  
+		   buttonLEFT = true;
+			cpu.joypadInt();
 		}
+		if(key.getKeyCode() == keyRIGHT)
+		{	
+		   buttonRIGHT = true;
+			cpu.joypadInt();
+		}
+      if(key.getKeyCode() == keyUP)
+		{
+		   buttonUP = true;
+			cpu.joypadInt();
+		}
+		if(key.getKeyCode() == keyDOWN)
+		{
+		   buttonDOWN = true;
+			cpu.joypadInt();
+		}
+		if(key.getKeyCode() == keyA)
+		{
+		   buttonA = true;
+			cpu.joypadInt();
+		}
+		if(key.getKeyCode() == keyB)
+		{
+		   buttonB = true;
+			cpu.joypadInt();
+		}
+		if(key.getKeyCode() == keySTART)
+		{
+		   buttonSTART = true;
+			cpu.joypadInt();
+		}
+		if(key.getKeyCode() == keySELECT)
+		{
+		   buttonSELECT = true;
+			cpu.joypadInt();
+		}  
 	}
 	
 	public void keyReleased(KeyEvent key)
 	{
-	   switch(key.getKeyCode())
-		{
-		   case KeyEvent.VK_LEFT:
-			   buttonLEFT = false;
-			break;
+	   if(key.getKeyCode() == keyLEFT)
+		   buttonLEFT = false;
 			
-			case KeyEvent.VK_RIGHT:
-			   buttonRIGHT = false;
-			break;
+		if(key.getKeyCode() == keyRIGHT)
+		   buttonRIGHT = false;
 			
-			case KeyEvent.VK_UP:
-			   buttonUP = false;
-			break;
+      if(key.getKeyCode() == keyUP)
+		   buttonUP = false;
+		
+		if(key.getKeyCode() == keyDOWN)
+		   buttonDOWN = false;
+		
+		if(key.getKeyCode() == keyA)
+		   buttonA = false;
+		
+		if(key.getKeyCode() == keyB)
+		   buttonB = false;
 			
-			case KeyEvent.VK_DOWN:
-			   buttonDOWN = false;
-			break;
-			
-			case KeyEvent.VK_X:
-			   buttonA = false;
-			break;
-			
-			case KeyEvent.VK_Z:
-			   buttonB = false;
-			break;
-			
-			case KeyEvent.VK_ENTER:
-			   buttonSTART = false;
-			break;
-			
-			case KeyEvent.VK_SPACE:
-			   buttonSELECT = false;
-			break;  
-		}
+		if(key.getKeyCode() == keySTART)
+		   buttonSTART = false;
+		
+		if(key.getKeyCode() == keySELECT)
+		   buttonSELECT = false;
+		
 	}
 	
 	public void keyTyped(KeyEvent key){ //empty method cause I need it <dumb>
@@ -377,6 +376,8 @@ public class GUI implements KeyListener//, FrameListener
 		 	add(mi = new MenuItem("Run"));
 			mi.addActionListener(this);
 			add(mi = new MenuItem("Pause"));
+			mi.addActionListener(this);
+			add(mi = new MenuItem("Controls"));
 			mi.addActionListener(this);
 		    add(mi = new MenuItem("Exit")); 
 		    mi.addActionListener(this); 
@@ -467,6 +468,10 @@ public class GUI implements KeyListener//, FrameListener
 					System.out.println("No Thread Running");
 				System.exit(0); //messy, probably should pass this a window event
 								//not that I know how... :x
+			}
+			else if(item.equals("Controls"))
+			{
+			   Controls keyset = new Controls();  
 			}
 			else
 				System.out.println("Selected FileMenu " + item); 
@@ -569,6 +574,176 @@ public class GUI implements KeyListener//, FrameListener
 			else if(item.equals("Channel 4")){
 				// Toggle channel
 			}
+		}
+	}
+	
+   public class Controls  implements ActionListener, KeyListener {
+	   public int keyLEFT, keyRIGHT, keyUP, keyDOWN, keyA, keyB, keySTART, keySELECT;
+		private Label leftL, rightL, upL, downL, aL, bL, startL, selectL;
+		private TextField leftT, rightT, upT, downT, aT, bT, startT, selectT;
+		private Button OK, Cancel;
+		private Frame frame;
+		
+		public Controls()
+		{
+			frame = new Frame("Controls");
+			LayoutManager layout;
+			
+			keyLEFT = GUI.keyLEFT;
+			keyRIGHT = GUI.keyRIGHT;
+			keyUP = GUI.keyUP;
+			keyDOWN = GUI.keyDOWN;
+			keyA = GUI.keyA;
+			keyB = GUI.keyB;
+			keySTART = GUI.keySTART;
+			keySELECT = GUI.keySELECT;
+			
+			leftL = new Label("Left");
+			rightL = new Label("Right");
+			upL = new Label("Up");
+			downL = new Label("Down");
+			aL = new Label("A");
+			bL = new Label("B");
+			startL = new Label("Start");
+			selectL = new Label("Select");
+			
+			leftT = new TextField(KeyEvent.getKeyText(keyLEFT), 5);
+			leftT.addKeyListener(this);
+			leftT.setEditable(false);
+			rightT = new TextField(KeyEvent.getKeyText(keyRIGHT), 5);
+			rightT.addKeyListener(this);
+			rightT.setEditable(false);
+			upT = new TextField(KeyEvent.getKeyText(keyUP), 5);
+			upT.addKeyListener(this);
+			upT.setEditable(false);
+			downT = new TextField(KeyEvent.getKeyText(keyDOWN), 5);
+			downT.addKeyListener(this);
+			downT.setEditable(false);
+			aT = new TextField(KeyEvent.getKeyText(keyA), 5);
+			aT.addKeyListener(this);
+			aT.setEditable(false);
+			bT = new TextField(KeyEvent.getKeyText(keyB), 5);
+			bT.addKeyListener(this);
+			bT.setEditable(false);
+			startT = new TextField(KeyEvent.getKeyText(keySTART), 5);
+			startT.addKeyListener(this);
+			startT.setEditable(false);
+			selectT = new TextField(KeyEvent.getKeyText(keySELECT), 5);
+			selectT.addKeyListener(this);
+			selectT.setEditable(false);
+			
+			OK = new Button("OK");
+			OK.setActionCommand("OK");
+			OK.addActionListener(this);
+			Cancel = new Button("Cancel");
+			Cancel.setActionCommand("Cancel");
+			Cancel.addActionListener(this);
+			
+			frame.setSize(250, 260);
+		   frame.setLocation(400, 200);
+			
+			layout = new GridLayout(9, 2, 10, 5);
+			frame.setLayout(layout);
+			
+			frame.add(leftL);
+			frame.add(leftT);
+			frame.add(rightL);
+			frame.add(rightT);
+			frame.add(upL);
+			frame.add(upT);
+			frame.add(downL);
+			frame.add(downT);
+			frame.add(aL);
+			frame.add(aT);
+			frame.add(bL);
+			frame.add(bT);
+			frame.add(startL);
+			frame.add(startT);
+			frame.add(selectL);
+			frame.add(selectT);
+			frame.add(OK);
+			frame.add(Cancel);
+			
+			frame.setVisible(true);
+			frame.addWindowListener(new WindowAdapter()
+		   {
+			   public void windowClosing(WindowEvent we)
+			   {
+           		frame.dispose();
+     		   }
+		   });
+		}
+		
+		public void actionPerformed(ActionEvent e)
+		{
+		   if(e.getActionCommand().equals("OK"))
+			{
+			   GUI.keyLEFT = keyLEFT;
+				GUI.keyRIGHT = keyRIGHT;
+				GUI.keyUP = keyUP;
+				GUI.keyDOWN = keyDOWN;
+				GUI.keyA = keyA;
+				GUI.keyB = keyB;
+				GUI.keySTART = keySTART;
+				GUI.keySELECT = keySELECT;
+				//System.out.println("Controls -- Up: " + GUI.keyUP + "  Down: " + GUI.keyDOWN + " Left: " + GUI.keyLEFT + " Right: " + GUI.keyRIGHT
+				  //  + " A: " + GUI.keyA + " B: " + GUI.keyB + "  START: " + GUI.keySTART + "  SELECT: " + GUI.keySELECT);
+			   frame.dispose();
+			}
+			if(e.getActionCommand().equals("Cancel"))
+			{
+			  // System.out.println("Controls -- Up: " + GUI.keyUP + "  Down: " + GUI.keyDOWN + " Left: " + GUI.keyLEFT + " Right: " + GUI.keyRIGHT
+				   // + " A: " + GUI.keyA + " B: " + GUI.keyB + "  START: " + GUI.keySTART + "  SELECT: " + GUI.keySELECT);
+			   frame.dispose();
+			}
+		}
+		
+		public void keyReleased(KeyEvent e){}
+		public void keyTyped(KeyEvent e){}
+		
+		public void keyPressed(KeyEvent e)
+		{
+		   if(e.getComponent() == leftT)
+			{
+			   keyLEFT = e.getKeyCode();
+				leftT.setText(KeyEvent.getKeyText(keyLEFT));
+			}
+			if(e.getComponent() == rightT)
+			{
+			   keyRIGHT = e.getKeyCode();
+				rightT.setText(KeyEvent.getKeyText(keyRIGHT));
+			}
+			if(e.getComponent() == upT)
+			{
+				keyUP = e.getKeyCode();
+				upT.setText(KeyEvent.getKeyText(keyUP));
+			}
+			if(e.getComponent() == downT)
+			{
+			   keyDOWN = e.getKeyCode();
+				downT.setText(KeyEvent.getKeyText(keyDOWN));
+			}
+			if(e.getComponent() == aT)
+			{
+			   keyA = e.getKeyCode();
+				aT.setText(KeyEvent.getKeyText(keyA));
+			}
+			if(e.getComponent() == bT)
+			{
+			   keyB = e.getKeyCode();
+				bT.setText(KeyEvent.getKeyText(keyB));
+			}
+			if(e.getComponent() == startT)
+			{
+			   keySTART = e.getKeyCode();
+				startT.setText(KeyEvent.getKeyText(keySTART));
+			}
+		   if(e.getComponent() == selectT)
+			{
+			   keySELECT = e.getKeyCode();
+				selectT.setText(KeyEvent.getKeyText(keySELECT));
+			}
+
 		}
 	}
 }
