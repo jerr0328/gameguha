@@ -3,10 +3,10 @@ import java.awt.image.*;
 import java.awt.event.*;
 import java.util.*; // random colors look cool! but slow to generate
 
-public class GUI implements KeyListener
+public class GUI implements KeyListener//, FrameListener
 {
-	private static final int screenWidth = 160;
-	private static final int screenHeight = 144;
+	public static final int screenWidth = 160;
+	public static final int screenHeight = 144;
 	private static CPU cpu;
 	private static Graphics g;
 	private static BufferedImage screen;
@@ -34,7 +34,7 @@ public class GUI implements KeyListener
 	{
     	frame = new Frame("GameGuha");
     	MenuBar mb = new MenuBar();
-    	mb.add(new FileMenu(frame));
+    	mb.add(new FileMenu(frame, this));
     	mb.add(new ViewMenu());
     	mb.add(new SoundMenu());
     	frame.setMenuBar(mb);
@@ -69,48 +69,50 @@ public class GUI implements KeyListener
 		zoom = 1;
 		delayZoom = 1;
 
-		while(true)
+		/*while(true)
 		{
 			frames++;
 			if (frames == 60)
 			{
-				System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
+				//System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
 				frames = 0;
 				startT = System.nanoTime();
 			}
 			
 			int[] arr = {0};
 			drawFrame(arr);
-		}
+		}*/
 	}
 	
-	public void drawFrame(int[] VRAM)
+	public void newFrame(int[] gbScreen)
 	{
 		if (zoom != delayZoom)
 			changeZoom();
 		
 		int[] buffer = imgBuffer;
 				
-		int xPixel, yPixel, randCol;
+		int xPixel, yPixel, col;
 		
 		switch (zoom)
 		{
 			case 1:
-				int y1 = 0;
+				System.arraycopy(gbScreen, 0, buffer, 0, buffer.length);
+				/*int y1 = 0;
 				for(yPixel = 0; yPixel < 144; yPixel++)
 				{
 					for (xPixel = 0; xPixel < 160; xPixel++)
 					{
-						randCol = gen.nextInt();
+						col = gen.nextInt();
 						
-						buffer[xPixel+y1] = randCol;
+						buffer[xPixel+y1] = col;
 					}
 					y1 += 160;
-				}
+				}*/
 			break;
 			
 			case 2:
 				int x;
+				int y1;
 				int y2 = -(screenWidth*2);
 				for(yPixel = 0; yPixel < 144; yPixel++)
 				{
@@ -119,17 +121,17 @@ public class GUI implements KeyListener
 					
 					for (x = 0; x < 320; x++)
 					{
-						randCol = gen.nextInt();
-						
 						xPixel = x >> 1;
+						
+						col = gbScreen[yPixel*screenWidth + xPixel];
 	
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
 						
 						x++;
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
 					}
 				}
 			break;
@@ -145,23 +147,23 @@ public class GUI implements KeyListener
 					
 					for (xPixel = 0; xPixel < 160; xPixel++)
 					{
-						randCol = gen.nextInt();
+						col = gbScreen[yPixel*screenWidth + xPixel];
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
-						
-						x++;
-						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
 						
 						x++;
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
+						
+						x++;
+						
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
 						
 						x++;
 					}
@@ -181,33 +183,33 @@ public class GUI implements KeyListener
 					{
 						xPixel = x >> 2;
 						
-						randCol = gen.nextInt();
+						col = gbScreen[yPixel*screenWidth + xPixel];
 	
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
-						buffer[x + y4] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
+						buffer[x + y4] = col;
 						
 						x++;
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
-						buffer[x + y4] = randCol;;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
+						buffer[x + y4] = col;;
 						
 						x++;
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
-						buffer[x + y4] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
+						buffer[x + y4] = col;
 						
 						x++;
 						
-						buffer[x + y1] = randCol;
-						buffer[x + y2] = randCol;
-						buffer[x + y3] = randCol;
-						buffer[x + y4] = randCol;
+						buffer[x + y1] = col;
+						buffer[x + y2] = col;
+						buffer[x + y3] = col;
+						buffer[x + y4] = col;
 					}
 				}
 			break;
@@ -221,6 +223,9 @@ public class GUI implements KeyListener
 	public void setZoom(int delayZoom)
 	{
 		this.delayZoom = delayZoom;
+		
+		if (cpu == null || cpu.getWaiting())
+			changeZoom();
 	}
 	
 	private void changeZoom()
@@ -352,10 +357,12 @@ public class GUI implements KeyListener
 	//End of the key registering stuff. 	
 	private class FileMenu extends Menu implements ActionListener {
 		Frame mw;
+		GUI gui;
 			
-		public FileMenu(Frame m){
+		public FileMenu(Frame m, GUI g){
 			super("File");
 			mw = m;
+			gui = g;
 			MenuItem mi; 
 		    add(mi = new MenuItem("Open")); 
 		    mi.addActionListener(this);
@@ -400,7 +407,8 @@ public class GUI implements KeyListener
 							}
 						}
 						
-						cpu = new CPU(rom);
+						cpu = new CPU(rom, gui);
+						//cpu.addFrameListener(this);
 						cpu.start();
 					}
 					// Should we output something for "Invalid ROM?"
