@@ -52,6 +52,9 @@ public class CPU extends Thread
 	private int TMA; // $FF06
 	private int TAC; // $FF07
 	private int IF; // $FF0F
+	private int NR21; // $FF16 bits 6-7
+	private int NR22; // $FF17 entire byte
+	private int NR24; // $FF19 bit 6
 	private int LCDC; // $FF40
 	private int SCY; // $FF42
 	private int SCX; // $FF43
@@ -257,6 +260,12 @@ public class CPU extends Thread
 						return TAC;
 					case 0xFF0F:
 						return IF;
+					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty(R/W)
+						return NR21; // Wave Pattern Duty
+					case 0xFF17: // Channel 2 Volume Envelope (R/W)
+						return NR22; // Volume Envelope
+					case 0xFF18: // Channel 2 Frequency Hi (R/W)
+						return NR24; // Counter/Consecutive Selection
 					case 0xFF40:
 						return LCDC;
 					case 0xFF42:
@@ -330,24 +339,25 @@ public class CPU extends Thread
 							return (TMA = val);
 						case 0xFF07:
 							return (TAC = val);
-						case 0xFF10: //Channel 1, Sweep
-							snd.channel1.setSweep(val);
+						case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
+							snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
+							snd.channel2.setWavePatternDuty(val & (BIT6 | BIT7));
+							return (NR21 = (val & (BIT6 | BIT7)));
+						case 0xFF17: // Channel 2 Volume Envelope (R/W)
+							snd.channel2.setVolumeEnvelope(
+							(val & (BIT7|BIT6|BIT5|BIT4)),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
+							return val;
+						case 0xFF18: // Channel 2 Frequency Lo (W)
+							snd.channel2.setFrequencyLo(val);
 							break;
-						case 0xFF11: //Channel 1, Length/Wave Duty
-							snd.channel1.setDutyCycle(val);
-							snd.channel1.setLength(val);
-							break;
-						case 0xFF12: //Channel 1, Volume Envelope
-							snd.channel1.setEnvelope(val);
-							break;
-						case 0xFF13: //Channel 1, Low 8 Frequency
-							snd.channel1.setFrequencyLo(val);
-							index=0xFF14;
-							break;
-						case 0xFF14: //Channel 1, High 3 Frequency
-							snd.channel1.setFrequencyHi(val);
-							index=0xFF13;
-							break;
+						case 0xFF19: // Channel 2 Frequency Hi (R/W)
+							snd.channel2.setSoundLength(val & BIT7);
+							snd.channel2.setCounter(val & BIT6);
+							snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
+							if((val & BIT7) == -1)
+								snd.channel2.setSoundLength(-1);
+							
+							return (NR24 = (val & BIT6));
 						
 						case 0xFF0F:
 							return (IF = val);
