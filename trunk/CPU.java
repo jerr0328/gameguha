@@ -457,8 +457,9 @@ public class CPU extends Thread
 			{
 				if (!visited[PC])
 				{
-			   		System.out.printf("Instruction %02X at %04X\n", readMem(PC), PC);
+					//System.out.println(Integer.toBinaryString(P1));
 			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
+			   		System.out.printf("Instruction %02X at %04X\n", readMem(PC), PC);
 			   		visited[PC] = true;
 				}
 			
@@ -3784,6 +3785,7 @@ public class CPU extends Thread
 							{
 								int bitPos = (y << 4) + x; // 16*y + x
 								int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+							//***System.out.println("Grabbing bit " + (bitPos%8));
 								int bitSet = (1 << (bitPos & 0x7)); // 1 << (bitPos%8)
 							//System.out.println("** " + tileNum);
 							//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
