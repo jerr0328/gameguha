@@ -203,8 +203,45 @@ public class CPU extends Thread
 			case 0xFF:
 				switch(index)
 				{
-					case 0xFF00:
+					case 0xFF00: //Joypad
+						/*Button controls
+						 7    6      5       4       3     2     1    0
+						[NA][NA][Sel Btn][Sel Dir][D/St][U/Sel][L/B][R/A]*/
+						// Check for Joypad presses
+						// check 5 or 4
+						P1 |= 0x0F;
+						if((P1 & BIT5) == 0)
+						{
+					
+							if(gui.getStart())
+								P1 &= ~BIT3;
+				
+							if(gui.getSelect())
+								P1 &= ~BIT2;
+						
+							if(gui.getB())
+								P1 &= ~BIT1;
+						
+							if(gui.getA())
+								P1 &= ~BIT0;
+						}
+						else if((P1 & BIT4) == 0)
+						{
+					
+							if(gui.getDown())
+								P1 &= ~BIT3;
+						
+							if(gui.getUp())
+								P1 &= ~BIT2;
+				
+							if(gui.getLeft())
+								P1 &= ~BIT1;
+				
+							if(gui.getRight())
+								P1 &= ~BIT0;
+						}
 						return P1;
+						
 					case 0xFF0F:
 						return IF;
 					case 0xFF40:
@@ -268,7 +305,8 @@ public class CPU extends Thread
 					{
 						// Handle IO ports
 						case 0xFF00: //Joypad
-							return (P1 = (val & 0xF0));
+							return (P1 = val);
+							
 						case 0xFF10: //Channel 1, Sweep
 							snd.channel1.setSweep(val);
 							break;
@@ -3677,6 +3715,32 @@ public class CPU extends Thread
 				
 				if (numCycles >= nextHBlank)
 				{
+					// HANDLE INTERRUPTS HERE
+					
+					if (IME)
+					{
+						if ((IE & BIT0) != 0 && (IF & BIT0) != 0)
+						{
+							IF &= ~BIT0;
+							IME = false;
+							writeMem(--SP, PC >> 8);
+							writeMem(--SP, PC & 0x00FF);
+							PC = 0x0040;
+						}
+						else if ((IE & BIT4) != 0 && (IF & BIT4) != 0)
+						{
+							IF &= ~BIT4;
+							IME = false;
+							writeMem(--SP, PC >> 8);
+							writeMem(--SP, PC & 0x00FF);
+							PC = 0x0060;
+						}
+						
+					}
+					
+					// STOP HANDLING INTERRUPTS
+					
+					
 					if (scanline < GUI.screenHeight) //  && (LCDC & BIT0) != 0
 					{
 						//System.out.println("OMG!");
@@ -3748,61 +3812,8 @@ public class CPU extends Thread
 					//System.out.println(PC);
 					
 					if (numCycles >= nextVBlank)
-					{
-						/*Button controls
-						 7    6      5       4       3     2     1    0
-						[NA][NA][Sel Btn][Sel Dir][D/St][U/Sel][L/B][R/A]*/
-						// Check for Joypad presses
-						// check 5 or 4
-						P1 |= 0x0F;
-						if((P1 & BIT5) == 0)
-						{
-						
-							if(gui.getStart())
-							{
-								P1 &= ~BIT3;
-								System.out.println("P1 is: " +Integer.toBinaryString(P1));
-							}
-					
-							else if(gui.getSelect())
-								P1 &= ~BIT2;
-							
-							else if(gui.getB())
-								P1 &= ~BIT1;
-							
-							else if(gui.getA())
-								P1 &= ~BIT0;
-						}
-						else if((P1 & BIT4) == 0)
-						{
-						
-							if(gui.getDown())
-								P1 &= ~BIT3;
-							
-							else if(gui.getUp())
-								P1 &= ~BIT2;
-					
-							else if(gui.getLeft())
-								P1 &= ~BIT1;
-					
-							else if(gui.getRight())
-								P1 &= ~BIT0;
-						}
-						
-						// HANDLE INTERRUPTS HERE
-					
-						//handle vb inter.
-						if (IME & ((IE & BIT0) != 0))
-						{
-						//	System.out.println("VBLANK");
-							IME = false;
-							writeMem(--SP, PC >> 8);
-							writeMem(--SP, PC & 0x00FF);
-							PC = 0x0040;
-						}
-						
-						
-						// STOP HANDLING INTERRUPTS
+					{						
+						IF |= BIT0; // Request VBLANK
 						
 						nextVBlank += CYCLES_PER_LINE*154;
 					}
