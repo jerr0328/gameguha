@@ -3785,8 +3785,8 @@ public class CPU extends Thread
 							{
 								int bitPos = (y << 4) + x; // 16*y + x
 								int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
-							//***System.out.println("Grabbing bit " + (bitPos%8));
-								int bitSet = (1 << (bitPos & 0x7)); // 1 << (bitPos%8)
+							//System.out.println("Grabbing bit " + (bitPos%8));
+								int bitSet = (1 << (7-(bitPos & 0x7))); // 1 << (7-(bitPos%8))
 							//System.out.println("** " + tileNum);
 							//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
 								int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
