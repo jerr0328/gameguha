@@ -47,11 +47,16 @@ public class CPU extends Thread
 	private int[] IO;
 	
 	private int P1; // $FF00
+	private int DIV; // $FF04
+	private int TIMA; // $FF05
+	private int TMA; // $FF06
+	private int TAC; // $FF07
 	private int IF; // $FF0F
 	private int LCDC; // $FF40
 	private int SCY; // $FF42
 	private int SCX; // $FF43
 	private int LY; // $FF44
+	private int DMA; // $FF46
 	private int BGP; // $FF47
 	private int IE; // $FFFF
 	
@@ -241,7 +246,15 @@ public class CPU extends Thread
 								P1 &= ~BIT0;
 						}
 						return P1;
-						
+					
+					case 0xFF04:
+						return DIV;
+					case 0xFF05:
+						return TIMA;
+					case 0xFF06:
+						return TMA;
+					case 0xFF07:
+						return TAC;
 					case 0xFF0F:
 						return IF;
 					case 0xFF40:
@@ -252,6 +265,8 @@ public class CPU extends Thread
 						return SCX;
 					case 0xFF44:
 						return LY;
+					case 0xFF46:
+						return DMA;
 					case 0xFF47:
 						return BGP;
 					case 0xFFFF:
@@ -271,6 +286,7 @@ public class CPU extends Thread
 		switch(mbc)
 		{
 			case 0:
+			default:
 				switch (index >> 8)
 				{
 					case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87: 
@@ -306,7 +322,14 @@ public class CPU extends Thread
 						// Handle IO ports
 						case 0xFF00: //Joypad
 							return (P1 = val);
-							
+						//case 0xFF04:
+						//	return (DIV = 0);
+						//case 0xFF05:
+						//	return (TIMA = val);
+						case 0xFF06:
+							return (TMA = val);
+						case 0xFF07:
+							return (TAC = val);
 						case 0xFF10: //Channel 1, Sweep
 							snd.channel1.setSweep(val);
 							break;
@@ -336,6 +359,11 @@ public class CPU extends Thread
 							return (SCX = val);
 						case 0xFF44:
 							return (LY = val);
+						case 0xFF46:
+							index = val << 8;
+							for (int i = 0; i < 0xA0; i++)
+								OAM[i] = readMem(index + i);
+							return (DMA = val);
 						case 0xFF47:
 							return (BGP = val);
 						case 0xFFFF:
@@ -351,7 +379,7 @@ public class CPU extends Thread
 					default:
 						return val; // cannot write to ROM
 				}
-			
+			/*
 			case 1:
 				switch (index >> 8)
 				{
@@ -380,9 +408,9 @@ public class CPU extends Thread
 				}
 			break;
 			
-			default: throw new AssertionError("Invalid MBC type");
+			default: throw new AssertionError("Invalid MBC type");*/
 		}
-		throw new AssertionError("writeMem() did not return a value");
+		//throw new AssertionError("writeMem() did not return a value");
 	}
 	
 	public void run()
@@ -3728,6 +3756,14 @@ public class CPU extends Thread
 							writeMem(--SP, PC & 0x00FF);
 							PC = 0x0040;
 						}
+						if ((IE & BIT2) != 0 && (IF & BIT2) != 0)
+						{
+							IF &= ~BIT2;
+							IME = false;
+							writeMem(--SP, PC >> 8);
+							writeMem(--SP, PC & 0x00FF);
+							PC = 0x0050;
+						}
 						else if ((IE & BIT4) != 0 && (IF & BIT4) != 0)
 						{
 							IF &= ~BIT4;
@@ -3827,8 +3863,15 @@ public class CPU extends Thread
 						nextVBlank &= 0xFFFFF;
 					}
 					
-					//DIVIDER = numCycles >> 6;
-					//TIMA = ...
+					DIV = (numCycles >> 6) & 0xFF;
+					
+					if ((TAC & BIT2) != 0)
+					{
+						int div = (((TAC-1) & 0x03) + 1) << 1;
+						
+						if (TIMA > (TIMA = TMA + ((numCycles >> div) % (256-TMA))))
+							IF |= BIT2;
+					}
 					
 					// V-Blank
 					//PC = 0x0040;
