@@ -38,6 +38,8 @@ public class CPU extends Thread
 	
 	private static final int CYCLES_PER_LINE = 114; // (1048576 Hz/ 9198 Hz)
 	
+	private static final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
+	
 	private int[] ROM;
 	private int[] ROMbank;
 	private int[] VRAM;
@@ -61,6 +63,8 @@ public class CPU extends Thread
 	private int LY; // $FF44
 	private int DMA; // $FF46
 	private int BGP; // $FF47
+	private int OBP0; // $FF48
+	private int OBP1; // $FF49
 	private int IE; // $FFFF
 	
 	private int[] HRAM;
@@ -72,6 +76,10 @@ public class CPU extends Thread
 	private int mbc = 0; // ROM only for now
 	private boolean pleaseWait;
 	private boolean halt;
+	
+	private int[] colorBG = new int[4];
+	private int[] colorSP0 = new int[4];
+	private int[] colorSP1 = new int[4];
 	
 	//private EventListenerList frameListeners = new EventListenerList();
 	
@@ -278,6 +286,10 @@ public class CPU extends Thread
 						return DMA;
 					case 0xFF47:
 						return BGP;
+					case 0xFF48:
+						return OBP0;
+					case 0xFF49:
+						return OBP1;
 					case 0xFFFF:
 						return IE;
 					
@@ -375,7 +387,21 @@ public class CPU extends Thread
 								OAM[i] = readMem(index + i);
 							return (DMA = val);
 						case 0xFF47:
+							colorBG[0] = color[val & (BIT1 | BIT0)];
+							colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
+							colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
+							colorBG[3] = color[val >> 6];
 							return (BGP = val);
+						case 0xFF48:
+							colorSP0[1] = color[(val & (BIT3 | BIT2)) >> 2];
+							colorSP0[2] = color[(val & (BIT5 | BIT4)) >> 4];
+							colorSP0[3] = color[val >> 6];
+							return (OBP0 = val);
+						case 0xFF49:
+							colorSP1[1] = color[(val & (BIT3 | BIT2)) >> 2];
+							colorSP1[2] = color[(val & (BIT5 | BIT4)) >> 4];
+							colorSP1[3] = color[val >> 6];
+							return (OBP1 = val);
 						case 0xFFFF:
 							return (IE = val);
 						
@@ -461,13 +487,9 @@ public class CPU extends Thread
 		int scanline = 0;
 		int nextHBlank = CYCLES_PER_LINE;
 		int nextVBlank = CYCLES_PER_LINE*144;
-		int[] colorBG = new int[4];
-		int[] colorSP0 = new int[4];
-		int[] colorSP1 = new int[4];
+		int[] myColor;
 		int[] screen = new int[GUI.screenWidth * GUI.screenHeight];
 		
-		final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
-	
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
 		
 		/*for (int q = 0; q < 256; q++)
@@ -3787,71 +3809,139 @@ public class CPU extends Thread
 					
 					// STOP HANDLING INTERRUPTS
 					
-					
-					if (scanline < GUI.screenHeight) //  && (LCDC & BIT0) != 0
+					// Draw current scanline
+					if (scanline < GUI.screenHeight)
 					{
-						//System.out.println("OMG!");
-						colorBG[0] = color[BGP & (BIT1 | BIT0)];
-						colorBG[1] = color[(BGP & (BIT3 | BIT2)) >> 2];
-						colorBG[2] = color[(BGP & (BIT5 | BIT4)) >> 4];
-						colorBG[3] = color[BGP >> 6];
-						
-						// Draw current scanline
-						int xPix = 0;
-						// x = SCX % 8
-						int x = SCX & 0x7;
-						// y = (SCY + scanline) % 8
-						int y = (SCY + scanline) & 0x7;
-						// crntVal = ((((SCY + scanline) % 256) / 8) * 32) * (SCX / 8)
-						int crntVal = ((((SCY + scanline) & 0xFF) >> 3) << 5) + (SCX >> 3);
-						// maxVal = ((crntVal + 32) / 32) * 32
-						int maxVal = (crntVal + 32) & ~0x1F;
-				outer:	for(;;)
+						// Handle BG/Window
+						if ((LCDC & BIT0) != 0)
 						{
-							//int tileNum;
-							//if ((LCDC & BIT3) != 0)
-							//	tileNum = VRAM[0x1C00 + crntVal];
-							//else
-							int tileNum = VRAM[0x1800 + ((LCDC & BIT3) << 7) + crntVal];
+							myColor = colorBG;
 							
-							int tileIndex;
-							
-							if ((LCDC & BIT4) != 0)
+							int xPix = 0;
+							// x = SCX % 8
+							int x = SCX & 0x7;
+							// y = (SCY + scanline) % 8
+							int y = (SCY + scanline) & 0x7;
+							// crntVal = ((((SCY + scanline) % 256) / 8) * 32) * (SCX / 8)
+							int crntVal = ((((SCY + scanline) & 0xFF) >> 3) << 5) + (SCX >> 3);
+							// maxVal = ((crntVal + 32) / 32) * 32
+							int maxVal = (crntVal + 32) & ~0x1F;
+					outer:	for(;;)
 							{
-							//System.out.println("**1**");
-								tileIndex = tileNum << 4; // tileNum * 16
-							}
-							else
-							{
-							//System.out.println("**2**");	
-								tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
-							}
-							
-							while (x < 8)
-							{
-								int bitPos = (y << 4) + x; // 16*y + x
-								int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
-							//System.out.println("Grabbing bit " + (bitPos%8));
-								int bitSet = (1 << (7-(bitPos & 0x7))); // 1 << (7-(bitPos%8))
-							//System.out.println("** " + tileNum);
-							//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
-								int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-								               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+								//int tileNum;
+								//if ((LCDC & BIT3) != 0)
+								//	tileNum = VRAM[0x1C00 + crntVal];
+								//else
+								int tileNum = VRAM[0x1800 + ((LCDC & BIT3) << 7) + crntVal];
 								
-								screen[scanline*GUI.screenWidth + xPix] = colorBG[colorVal];
-								xPix++;
-								if (xPix >= GUI.screenWidth)
-									break outer;
-								x++;
+								int tileIndex;
+								
+								if ((LCDC & BIT4) != 0)
+								{
+								//System.out.println("**1**");
+									tileIndex = tileNum << 4; // tileNum * 16
+								}
+								else
+								{
+								//System.out.println("**2**");	
+									tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
+								}
+								
+								while (x < 8)
+								{
+									int bitPos = (y << 4) + x; // 16*y + x
+									int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+								//System.out.println("Grabbing bit " + (bitPos%8));
+									int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+								//System.out.println("** " + tileNum);
+								//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
+									int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+									               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+									
+									screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
+									xPix++;
+									if (xPix >= GUI.screenWidth)
+										break outer;
+									x++;
+								}
+								
+								x = 0;
+								crntVal++;
+								if (crntVal >= maxVal)
+									crntVal -= 32;
 							}
 							
-							x = 0;
-							crntVal++;
-							if (crntVal >= maxVal)
-								crntVal -= 32;
+							// To-do: Now handle Window
+							if ((LCDC & BIT5) != 0)
+							{
+								//...
+							}
 						}
+						// Done with BG/Window
+						
+						// Handle sprites
+						if ((LCDC & BIT1) != 0)
+						{
+							if ((LCDC & BIT2) != 0) // 8*16
+							{
+								/*for (int index = 0; index < 0xA0; index+=4)
+								{
+									// To-do: 8*16 sprites
+								}*/
+							}
+							else // 8*8
+							{
+								for (int sIndex = 0; sIndex < 0xA0; sIndex+=4)
+								{
+									int spriteY = OAM[sIndex];
+									if (spriteY > (scanline+16) || spriteY <= (scanline+8))
+										continue;
+									
+									int spriteX = OAM[sIndex+1];
+									int patternNum = OAM[sIndex+2];
+									int flags = OAM[sIndex+3];
+									
+									if ((flags & BIT4) != 0)
+										myColor = colorSP1;
+									else
+										myColor = colorSP0;
+									
+									// To-do: X flipping, Y flipping, priority bits
+									int y = 16 - (spriteY-scanline);
+									int xPix = spriteX-8;
+									for (int x = 0; x < 8; x++)
+									{
+										//System.out.println("pixel1");
+										if (xPix < 0 || xPix >= GUI.screenWidth)
+										{
+											xPix++;
+											continue;
+										}
+										//System.out.println("pixel2");
+										int bitPos = (y << 4) + x; // 16*y + x
+										int byteIndex = (patternNum << 4) + (bitPos >> 3); // patternIndex + (bitPos/8)
+									//System.out.println("Grabbing bit " + (bitPos%8));
+										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+									//System.out.println("** " + tileNum);
+									//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
+										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+										               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+										
+										//System.out.println(colorVal);
+										if (colorVal != 0)
+										{
+											//System.out.println("pixel3");
+											screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
+										}
+										xPix++;
+									}
+								
+								}
+							}
+						}
+						// Done with sprites
 					}
-					// Finished drawing current scanline of bg/window
+					// Finished drawing current scanline
 
 					nextHBlank += CYCLES_PER_LINE;
 					
@@ -3882,52 +3972,13 @@ public class CPU extends Thread
 						if (TIMA > (TIMA = TMA + ((numCycles >> div) % (256-TMA))))
 							IF |= BIT2;
 					}
-					
-					// V-Blank
-					//PC = 0x0040;
 				}
-				
-				/* old way + psuedo code
-				if (numCycles >= CYCLES_PER_LINE)
-				{
-					numCycles -= CYCLES_PER_LINE;
-					Handle h-blank interrupt
-					
-					if (scanline <= 143)
-					{
-						Draw scanline to VRAM
-					}
-					
-					MEM[LY] = ++scanline;			
-					if (scanline == 144)
-					{
-						Handle v-blank interrupt
-					}
-					
-					Handle LYC register
-				}
-				*/
-				
-				/*
-				val = scanline*CYCLES_PER_LINE + numCycles;
-				
-				if (timer is enabled)
-				{
-					MEM[0xFF05] = val >> #.
-					if (MEM[0xFF05] > 0xFF)
-					{
-						Handle timer interrupt
-						MEM[0xFF05] = MEM[0xFF06]; // TIMA = TMA
-					}
-				}
-				
-				MEM[0xFF04] = (val >> 6) & 0xFF;
-				*/
 			}
 			
-			gui.newFrame(screen);
-			
 			// Inform GUI class to render Gameboy's VRAM to screen
+			if ((LCDC & BIT7) != 0)
+				gui.newFrame(screen);
+			
 			LY = scanline = 0; // new frame
 			frameCount++;
 			
@@ -3940,7 +3991,6 @@ public class CPU extends Thread
 				startT = System.nanoTime();
 			}
 		}
-		
 		// cannot end main loop while CPU is still running!
 	}
 }
