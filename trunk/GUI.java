@@ -1,7 +1,6 @@
 import java.awt.*;
 import java.awt.image.*;
 import java.awt.event.*;
-import java.util.*; // random colors look cool! but slow to generate
 import java.io.*;
 
 public class GUI implements KeyListener//, FrameListener
@@ -17,7 +16,6 @@ public class GUI implements KeyListener//, FrameListener
 	private static Frame frame;
 	private static Frame keyframe;
 	private static Insets ins;
-	private static Random gen;
 	private static boolean buttonLEFT = false;
 	private static boolean buttonRIGHT = false;
 	private static boolean buttonUP = false;
@@ -73,7 +71,6 @@ public class GUI implements KeyListener//, FrameListener
 		screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
 		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
 
-		gen = new Random();
 		int frames = 0;
 		long startT = System.nanoTime();
 		
@@ -108,17 +105,6 @@ public class GUI implements KeyListener//, FrameListener
 		{
 			case 1:
 				System.arraycopy(gbScreen, 0, buffer, 0, buffer.length);
-				/*int y1 = 0;
-				for(yPixel = 0; yPixel < 144; yPixel++)
-				{
-					for (xPixel = 0; xPixel < 160; xPixel++)
-					{
-						col = gen.nextInt();
-						
-						buffer[xPixel+y1] = col;
-					}
-					y1 += 160;
-				}*/
 			break;
 			
 			case 2:
