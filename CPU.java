@@ -3884,10 +3884,59 @@ public class CPU extends Thread
 						{
 							if ((LCDC & BIT2) != 0) // 8*16
 							{
-								/*for (int index = 0; index < 0xA0; index+=4)
+								for (int sIndex = 0; sIndex < 0xA0; sIndex+=4)
 								{
-									// To-do: 8*16 sprites
-								}*/
+									int spriteY = OAM[sIndex];
+									if (spriteY > (scanline+16) || spriteY <= (scanline))
+										continue;
+									
+									int spriteX = OAM[sIndex+1];
+									int patternNum = OAM[sIndex+2] & ~0x01;
+									int flags = OAM[sIndex+3];
+									
+									if ((flags & BIT4) != 0)
+										myColor = colorSP1;
+									else
+										myColor = colorSP0;
+									
+									int y = 16 - (spriteY-scanline);
+									if ((flags & BIT6) != 0)
+										y = 15 - y;
+									
+									int deltaX;
+									int xPix;
+									if ((flags & BIT5) != 0)
+									{
+										xPix = spriteX-1;
+										deltaX = -1;
+									}
+									else
+									{
+										xPix = spriteX-8;
+										deltaX = 1;
+									}
+									
+									for (int x = 0; x < 8; x++)
+									{
+										if (xPix < 0 || xPix >= GUI.screenWidth)
+										{
+											xPix += deltaX;
+											continue;
+										}
+										int bitPos = (y << 4) + x; // 16*y + x
+										int byteIndex = (patternNum << 4) + (bitPos >> 3); // patternIndex + (bitPos/8)
+										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+										               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+										
+										if (colorVal != 0)
+										{
+											//if ((flags & BIT7) != 0 || screen[scanline*GUI.screenWidth + xPix] == colorBG[0])
+												screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
+										}
+										xPix += deltaX;
+									}
+								}
 							}
 							else // 8*8
 							{
@@ -3906,36 +3955,43 @@ public class CPU extends Thread
 									else
 										myColor = colorSP0;
 									
-									// To-do: X flipping, Y flipping, priority bits
 									int y = 16 - (spriteY-scanline);
-									int xPix = spriteX-8;
+									if ((flags & BIT6) != 0)
+										y = 7 - y;
+									
+									int deltaX;
+									int xPix;
+									if ((flags & BIT5) != 0)
+									{
+										xPix = spriteX-1;
+										deltaX = -1;
+									}
+									else
+									{
+										xPix = spriteX-8;
+										deltaX = 1;
+									}
+									
 									for (int x = 0; x < 8; x++)
 									{
-										//System.out.println("pixel1");
 										if (xPix < 0 || xPix >= GUI.screenWidth)
 										{
-											xPix++;
+											xPix += deltaX;
 											continue;
 										}
-										//System.out.println("pixel2");
 										int bitPos = (y << 4) + x; // 16*y + x
 										int byteIndex = (patternNum << 4) + (bitPos >> 3); // patternIndex + (bitPos/8)
-									//System.out.println("Grabbing bit " + (bitPos%8));
 										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-									//System.out.println("** " + tileNum);
-									//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
 										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
 										               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 										
-										//System.out.println(colorVal);
 										if (colorVal != 0)
 										{
-											//System.out.println("pixel3");
-											screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
+											//if ((flags & BIT7) != 0 || screen[scanline*GUI.screenWidth + xPix] == colorBG[0])
+												screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
 										}
-										xPix++;
+										xPix += deltaX;
 									}
-								
 								}
 							}
 						}
