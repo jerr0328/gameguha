@@ -353,11 +353,11 @@ public class CPU extends Thread
 							return (TAC = val);
 						case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
 							snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
-							snd.channel2.setWavePatternDuty(val & (BIT6 | BIT7));
+							snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
 							return (NR21 = (val & (BIT6 | BIT7)));
 						case 0xFF17: // Channel 2 Volume Envelope (R/W)
 							snd.channel2.setVolumeEnvelope(
-							(val & (BIT7|BIT6|BIT5|BIT4)),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
+							((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
 							return val;
 						case 0xFF18: // Channel 2 Frequency Lo (W)
 							snd.channel2.setFrequencyLo(val);
@@ -3777,6 +3777,9 @@ public class CPU extends Thread
 				if (numCycles >= nextHBlank)
 				{
 					// HANDLE INTERRUPTS HERE
+					
+				//	if(snd.soundEnabled)
+				//		snd.outputSound();
 					
 					if (IME)
 					{
