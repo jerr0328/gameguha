@@ -1378,7 +1378,7 @@ public class CPU extends Thread
 					case 0x84: //ADD A,H
 						numCycles++;
 						FREG = FLAG_ADD[HREG][AREG];
-						AREG = (AREG+LREG) & 0xFF;
+						AREG = (AREG+HREG) & 0xFF;
 					break;
 					
 					case 0x85: //ADD A,L
@@ -4078,7 +4078,7 @@ public class CPU extends Thread
 			if (frameCount == 100)
 			{
 				double secPer100 = (System.nanoTime()-startT) / 1000000000.0;
-				System.out.println(1.0 / (secPer100 * 0.01) + " fps");
+				//System.out.println(1.0 / (secPer100 * 0.01) + " fps");
 				frameCount = 0;
 				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
 				startT = System.nanoTime();
