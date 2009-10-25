@@ -1,5 +1,3 @@
-//import javax.swing.event.*;
-
 public class CPU extends Thread
 {
 /*	private static class ThreadLocalWaiting extends ThreadLocal
@@ -58,9 +56,11 @@ public class CPU extends Thread
 	private int NR22; // $FF17 entire byte
 	private int NR24; // $FF19 bit 6
 	private int LCDC; // $FF40
+	private int STAT; // $FF41
 	private int SCY; // $FF42
 	private int SCX; // $FF43
 	private int LY; // $FF44
+	private int LYC; // $FF45
 	private int DMA; // $FF46
 	private int BGP; // $FF47
 	private int OBP0; // $FF48
@@ -117,7 +117,7 @@ public class CPU extends Thread
 	
 	public void joypadInt()
 	{
-		IF &= BIT4;
+		IF |= BIT4;
 	}
 	
 	private static void genFlagTable(int[][] FLAG_ADD, int[][] FLAG_SUB, int[] FLAG_INC, int[] FLAG_DEC)
@@ -276,12 +276,16 @@ public class CPU extends Thread
 						return NR24; // Counter/Consecutive Selection
 					case 0xFF40:
 						return LCDC;
+					case 0xFF41:
+						return STAT;
 					case 0xFF42:
 						return SCY;
 					case 0xFF43:
 						return SCX;
 					case 0xFF44:
 						return LY;
+					case 0xFF45:
+						return LYC;
 					case 0xFF46:
 						return DMA;
 					case 0xFF47:
@@ -375,12 +379,16 @@ public class CPU extends Thread
 							return (IF = val);
 						case 0xFF40:
 							return (LCDC = val);
+						case 0xFF41:
+							return (STAT = ((val & 0xF8) | (STAT & 0x07)));
 						case 0xFF42:
 							return (SCY = val);
 						case 0xFF43:
 							return (SCX = val);
 						case 0xFF44:
-							return (LY = val);
+							return LY; // read only
+						case 0xFF45:
+							return (LYC = val);
 						case 0xFF46:
 							index = val << 8;
 							for (int i = 0; i < 0xA0; i++)
@@ -3776,10 +3784,10 @@ public class CPU extends Thread
 				
 				if (numCycles >= nextHBlank)
 				{
-					// HANDLE INTERRUPTS HERE
+					//	if(snd.soundEnabled)
+					//		snd.outputSound();
 					
-				//	if(snd.soundEnabled)
-				//		snd.outputSound();
+					// HANDLE INTERRUPTS HERE
 					
 					if (IME)
 					{
@@ -3791,7 +3799,16 @@ public class CPU extends Thread
 							writeMem(--SP, PC & 0x00FF);
 							PC = 0x0040;
 						}
-						if ((IE & BIT2) != 0 && (IF & BIT2) != 0)
+						else if ((IE & BIT1) != 0 && (IF & BIT1) != 0)
+						{
+							//System.out.println("Launching LCDC interrupt");
+							IF &= ~BIT1;
+							IME = false;
+							writeMem(--SP, PC >> 8);
+							writeMem(--SP, PC & 0x00FF);
+							PC = 0x0048;
+						}
+						else if ((IE & BIT2) != 0 && (IF & BIT2) != 0)
 						{
 							IF &= ~BIT2;
 							IME = false;
@@ -3815,6 +3832,10 @@ public class CPU extends Thread
 					// Draw current scanline
 					if (scanline < GUI.screenHeight)
 					{
+						STAT = (STAT & 0xFC);
+						if ((STAT & BIT3) != 0) // H-Blank interrupt
+							IF |= BIT1;
+						
 						// Handle BG/Window
 						if ((LCDC & BIT0) != 0)
 						{
@@ -4005,12 +4026,25 @@ public class CPU extends Thread
 					nextHBlank += CYCLES_PER_LINE;
 					
 					LY = ++scanline;
+					if (scanline == LYC)
+					{
+						STAT |= BIT2;
+						// To-do: Currently breaks Pipe Dream (not that it worked before), need to figure out why...
+						System.out.printf("%d scanline, LYC interrupt\n", scanline);
+						if ((STAT & BIT6) != 0)
+							IF |= BIT1;
+					}
+					else
+						STAT &= ~BIT2;
 					
 					//System.out.println(PC);
 					
 					if (numCycles >= nextVBlank)
 					{						
 						IF |= BIT0; // Request VBLANK
+						STAT = (STAT & 0xFC) | 0x01;
+						if ((STAT & BIT4) != 0) // LCDC V-Blank
+							IF |= BIT1;
 						
 						nextVBlank += CYCLES_PER_LINE*154;
 					}
