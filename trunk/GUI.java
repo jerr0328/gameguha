@@ -13,9 +13,12 @@ public class GUI implements KeyListener//, FrameListener
 	private static int[] imgBuffer;
 	private static int zoom;
 	private static int delayZoom;
+	private static GraphicsEnvironment ge;
+    private static GraphicsDevice gd;
 	private static Frame frame;
 	private static Frame keyframe;
 	private static Insets ins;
+	private static boolean fullScreen = false;
 	private static boolean buttonLEFT = false;
 	private static boolean buttonRIGHT = false;
 	private static boolean buttonUP = false;
@@ -40,6 +43,10 @@ public class GUI implements KeyListener//, FrameListener
 	
 	public void go()
 	{
+		ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		gd = ge.getDefaultScreenDevice();
+		System.out.println(gd.isFullScreenSupported());
+	
     	frame = new Frame("GameGuha");
     	MenuBar mb = new MenuBar();
     	mb.add(new FileMenu(frame, this));
@@ -214,7 +221,13 @@ public class GUI implements KeyListener//, FrameListener
 			default: throw new AssertionError("Zoom mode not supported");
 		}
 		
-		g.drawImage(screen, ins.left, ins.top, null);
+		//((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+		ins = frame.getInsets();
+		
+		if (fullScreen)
+			g.drawImage(screen, ins.left, ins.top, frame.getWidth() - ins.left - ins.right, frame.getHeight() - ins.top - ins.bottom, null);
+		else
+			g.drawImage(screen, ins.left, ins.top, null);
 	}
 	
 	public void setZoom(int delayZoom)
@@ -234,11 +247,23 @@ public class GUI implements KeyListener//, FrameListener
 		
 		screen = new BufferedImage(screenWidth*zoom, screenHeight*zoom, BufferedImage.TYPE_INT_RGB);
 		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
-	}	
+	}
+	
+	public void toggleFullScreen(boolean set)
+	{
+		fullScreen = set;
+		if (fullScreen)
+			gd.setFullScreenWindow(frame);
+		else
+			gd.setFullScreenWindow(null);
+	}
 	
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
+		if (key.getKeyCode() == KeyEvent.VK_F)
+			toggleFullScreen(!fullScreen);
+			
 	   if(key.getKeyCode() == keyLEFT)
 		{
 		   buttonLEFT = true;
@@ -491,6 +516,7 @@ public class GUI implements KeyListener//, FrameListener
 			
 			if (e.getItemSelectable() == zoom1)
 			{
+				toggleFullScreen(false);
 				zoom1.setState(true);
 				zoom2.setState(false);
 				zoom3.setState(false);
@@ -499,6 +525,7 @@ public class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom2)
 			{
+				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(true);
 				zoom3.setState(false);
@@ -507,6 +534,7 @@ public class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom3)
 			{
+				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(false);
 				zoom3.setState(true);
@@ -515,6 +543,7 @@ public class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom4)
 			{
+				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(false);
 				zoom3.setState(false);
