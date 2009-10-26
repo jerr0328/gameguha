@@ -1945,7 +1945,7 @@ public class CPU extends Thread
 							
 							case 0x02: // RLC D
 								numCycles+=2;
-								DREG = (DREG & BIT7) >> 3;
+								FREG = (DREG & BIT7) >> 3;
 								DREG = ((DREG << 1) | (DREG >> 7)) & 0xFF;
 								if (DREG == 0)
 									FREG |= ZERO;
@@ -1969,7 +1969,7 @@ public class CPU extends Thread
 							
 							case 0x05: // RLC L
 								numCycles+=2;
-								LREG = (LREG & BIT7) >> 3;
+								FREG = (LREG & BIT7) >> 3;
 								LREG = ((LREG << 1) | (LREG >> 7)) & 0xFF;
 								if (LREG == 0)
 									FREG |= ZERO;
@@ -4045,13 +4045,9 @@ public class CPU extends Thread
 						}
 						// Finished drawing current scanline
 
-						nextHBlank += CYCLES_PER_LINE;
-						
-						LY = ++scanline;
 						if (scanline == LYC)
 						{
 							STAT |= BIT2;
-							// To-do: Currently breaks Pipe Dream (not that it worked before), need to figure out why...
 							//System.out.printf("%d scanline, LYC interrupt\n", scanline);
 							if ((STAT & BIT6) != 0)
 								IF |= BIT1;
@@ -4061,8 +4057,8 @@ public class CPU extends Thread
 						
 						//System.out.println(PC);
 						
-						if (numCycles >= nextVBlank)
-						{						
+						if (scanline == GUI.screenHeight)
+						{
 							IF |= BIT0; // Request VBLANK
 							STAT = (STAT & 0xFC) | 0x01;
 							if ((STAT & BIT4) != 0) // LCDC V-Blank
@@ -4070,6 +4066,9 @@ public class CPU extends Thread
 							
 							nextVBlank += CYCLES_PER_LINE*154;
 						}
+						
+						LY = ++scanline;
+						nextHBlank += CYCLES_PER_LINE;
 						
 						if (numCycles >= 0x100000)
 						{
