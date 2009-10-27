@@ -403,14 +403,6 @@ public class GUI implements KeyListener//, FrameListener
 				String file = f.getFile();
 				if(file != null){
 					ROM rom = new ROM(f.getDirectory()+file);
-			        rom.printTitle();
-			        rom.printCartType();
-					rom.getRAMSize();
-			        System.out.print("Color: ");
-			        if(rom.isCGB())
-			            System.out.println("Yes");
-			        else
-			            System.out.println("No");
 			        // So this starts the CPU if it's a valid ROM
 					if(rom.verifyChecksum()){
 						/* Since we need to pass the ROM, unless we put some

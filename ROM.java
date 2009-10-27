@@ -4,21 +4,27 @@
 
 import java.io.*;
 
-public class ROM{
+public class ROM{	
+	public static final int bankSize = 0x4000;
+	public static final int ramSize = 0x2000;
+	public int numROMBanks;
+	public int numRAMBanks;
+	private int rom[][];
+	private int ram[][];
 	
-	private int selectedBank = 0; // Selected memory bank -implement function-
-	static final int bankSize = 0x4000;
-	static final int ramSize = 0x2000;
-	public int rom[][];
-	public int ram[][];
-	
-	// String constructor (usually for testing)
 	public ROM(String filename){
-		load(new File(filename));
+		this(new File(filename));
 	}
-	// For use when we have a GUI ROM loading
+	
 	public ROM(File file){
 		load(file);
+		printTitle();
+		getCartType(true);
+		System.out.print("Color: ");
+		if(isCGB())
+			System.out.println("Yes");
+		else
+			System.out.println("No");
 	}
 	
 	// Loads the ROM into memory
@@ -30,27 +36,27 @@ public class ROM{
 			{
 				firstBank[i] = buf.read();
 			}
-		
-			int numBanks = getROMSize(firstBank);
-			rom = new int[numBanks][bankSize];
-			int numRAMBanks = getRAMSize();
-			if(numRAMBanks != 0)
-				ram = new int[numRAMBanks][];
 			
-			for(int j = 1 ; j < numBanks; j++)
-				for(int i = 0; i < 0x4000; i++)
-				{
-					rom[j][i] = buf.read();
-				}
+			numROMBanks = getROMSize(firstBank, true);
+			rom = new int[numROMBanks][bankSize];
+			
 			for(int i = 0; i < 0x4000; i++)
 			{
 				rom[0][i] = firstBank[i];
 			}
+			for(int j = 1 ; j < numROMBanks; j++)
+				for(int i = 0; i < 0x4000; i++)
+				{
+					rom[j][i] = buf.read();
+				}
 				
 			buf.close();
+			
+			numRAMBanks = getRAMSize(true);
+			if(numRAMBanks != 0)
+				ram = new int[numRAMBanks][ramSize];
 		}
 		catch(Exception e){ e.printStackTrace(); }
-		
 	}
 	
 	public int[] getDefaultROM()
@@ -79,37 +85,40 @@ public class ROM{
 	}
 	
 	// Prints cartridge type, as specified in docs
-	public void printCartType(){
+	public int getCartType(boolean print){
 		String out="";
+		int mbc = -1;
 		switch(rom[0][0x0147]){
-			case 0x0: out="0 ROM ONLY"; break;
-			case 0x1: out="1 ROM+MBC1"; break;
-			case 0x2: out="2 ROM+MBC1+RAM"; break;
-			case 0x3: out="3 ROM+MBC1+RAM+BATT"; break;
-			case 0x5: out="5 ROM+MBC2"; break;
-			case 0x6: out="6 ROM+MBC2+BATTERY"; break;
-			case 0x8: out="8 ROM+RAM"; break;
-			case 0x9: out="9 ROM+RAM+BATTERY"; break;
+			case 0x0: out="0 ROM ONLY"; mbc = 0; break;
+			case 0x1: out="1 ROM+MBC1"; mbc = 1; break;
+			case 0x2: out="2 ROM+MBC1+RAM"; mbc = 1; break;
+			case 0x3: out="3 ROM+MBC1+RAM+BATT"; mbc = 1; break;
+			case 0x5: out="5 ROM+MBC2"; mbc = 2; break;
+			case 0x6: out="6 ROM+MBC2+BATTERY"; mbc = 2; break;
+			case 0x8: out="8 ROM+RAM"; mbc = 0; break;
+			case 0x9: out="9 ROM+RAM+BATTERY"; mbc = 0; break;
 			case 0xB: out="B ROM+MMM01"; break;
 			case 0xC: out="C ROM+MMM01+SRAM"; break;
 			case 0xD: out="D ROM+MMM01+SRAM+BATT"; break;
-			case 0x12: out="12 ROM+MBC3+RAM"; break;
-			case 0x13: out="13 ROM+MBC3+RAM+BATT"; break;
-			case 0x19: out="19 ROM+MBC5"; break;
-			case 0x1A: out="1A ROM+MBC5+RAM"; break;
-			case 0x1B: out="1B ROM+MBC5+RAM+BATT"; break;
-			case 0x1C: out="1C ROM+MBC5+RUMBLE"; break;
-			case 0x1D: out="1D ROM+MBC5+RUMBLE+SRAM"; break;
-			case 0x1E: out="1E ROM+MBC5+RUMBLE+SRAM+BATT"; break;
+			case 0x12: out="12 ROM+MBC3+RAM"; mbc = 3; break;
+			case 0x13: out="13 ROM+MBC3+RAM+BATT"; mbc = 3; break;
+			case 0x19: out="19 ROM+MBC5"; mbc = 5; break;
+			case 0x1A: out="1A ROM+MBC5+RAM"; mbc = 5; break;
+			case 0x1B: out="1B ROM+MBC5+RAM+BATT"; mbc = 5; break;
+			case 0x1C: out="1C ROM+MBC5+RUMBLE"; mbc = 5; break;
+			case 0x1D: out="1D ROM+MBC5+RUMBLE+SRAM"; mbc = 5; break;
+			case 0x1E: out="1E ROM+MBC5+RUMBLE+SRAM+BATT"; mbc = 5; break;
 			case 0x1F: out="1F Pocket Camera"; break;
 			case 0xFD: out="FD Bandai TAMA5"; break;
 			case 0xFE: out="FE Hudson HuC-3"; break;
-			
 		}
-		System.out.println("Cartridge type: "+out);
+		if (print)
+			System.out.println("Cartridge type: "+out);
+		return mbc;
 	}
+	
 	// Returns ROM size, as specified in docs
-	public int getROMSize(int bank[]){
+	public int getROMSize(int bank[], boolean print){
 		String out="";
 		int numBanks=0;
 		switch(bank[0x148]){
@@ -126,11 +135,12 @@ public class ROM{
 			case 0x54: out="1.5MB (96 banks)"; numBanks = 96; break;
 			
 		}
-		System.out.println("ROM Size: "+out);
+		if (print)
+			System.out.println("ROM Size: "+out);
 		return numBanks;
 	}
 	
-	public int getRAMSize(){
+	public int getRAMSize(boolean print){
 		String out="";
 		int numBanks=0;
 		switch(rom[0][0x149]){
@@ -141,7 +151,8 @@ public class ROM{
 			case 0x4: out="128KB RAM (8x16)"; numBanks=16; break;
 		
 		}
-		System.out.println("RAM Size: "+out);
+		if (print)
+			System.out.println("RAM Size: "+out);
 		return numBanks;
 	}
 

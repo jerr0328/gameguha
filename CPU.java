@@ -47,6 +47,8 @@ public class CPU extends Thread
 	private int[] IO;
 	
 	private int P1; // $FF00
+	private int SB; // $FF01
+	private int SC; // $FF02
 	private int DIV; // $FF04
 	private int TIMA; // $FF05
 	private int TMA; // $FF06
@@ -74,10 +76,13 @@ public class CPU extends Thread
 	
 	private ROM rom;
 	private GUI gui;
-	private Sound snd = new Sound(); 
-	private int mbc = 0; // ROM only for now
+	private Sound snd; 
+	private int mbc = 0;
+	private int mbcMode = 0;
+	private int mbcSig = 0;
 	private boolean pleaseWait;
 	private boolean halt;
+	private int newSerialInt;
 	
 	private int[] colorBG = new int[4];
 	private int[] colorSP0 = new int[4];
@@ -88,7 +93,10 @@ public class CPU extends Thread
 	public CPU(ROM rom, GUI gui)
 	{
 		this.rom = rom;
+		mbc = rom.getCartType(false);
+		System.out.println("mbc num: " + mbc);
 		this.gui = gui;
+		this.snd = new Sound();
 		pleaseWait = false; // Not in a waiting state on first run
 		halt = false;
 	}
@@ -119,7 +127,7 @@ public class CPU extends Thread
 	
 	public void joypadInt()
 	{
-		System.out.println("joypad interrupt requested");
+		//System.out.println("joypad interrupt requested");
 		IF |= BIT4;
 	}
 	
@@ -260,7 +268,10 @@ public class CPU extends Thread
 								P1 &= ~BIT0;
 						}
 						return P1;
-					
+					case 0xFF01:
+						return SB;
+					case 0xFF02:
+						return SC;
 					case 0xFF04:
 						return DIV;
 					case 0xFF05:
@@ -317,153 +328,206 @@ public class CPU extends Thread
 	{
 		switch(mbc)
 		{
-			case 0:
-			default:
-				switch (index >> 8)
-				{
-					case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87: 
-					case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8E: case 0x8F: 
-					case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97: 
-					case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F: 
-						return (VRAM[index-0x8000] = val);
-					
-					case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: 
-					case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: 
-					case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: 
-					case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF: 
-						return (RAMbank[index-0xA000] = val);
-					
-					case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: 
-					case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF: 
-					case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: case 0xD7: 
-					case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF: 
-						return (RAM[index-0xC000] = val);
-					
-					case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: 
-					case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF: 
-					case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7: 
-					case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: 
-						return (RAM[index-0xE000] = val); // echo internal RAM if in range [E000, FDFF]
-					
-					case 0xFE:
-						return (OAM[index-0xFE00] = val);
-					
-					case 0xFF:
-					switch(index)
-					{
-						// Handle IO ports
-						case 0xFF00: //Joypad
-							return (P1 = val);
-						//case 0xFF04:
-						//	return (DIV = 0);
-						//case 0xFF05:
-						//	return (TIMA = val);
-						case 0xFF06:
-							return (TMA = val);
-						case 0xFF07:
-							return (TAC = val);
-						case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
-							snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
-							snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
-							return (NR21 = (val & (BIT6 | BIT7)));
-						case 0xFF17: // Channel 2 Volume Envelope (R/W)
-							snd.channel2.setVolumeEnvelope(
-							((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
-							return val;
-						case 0xFF18: // Channel 2 Frequency Lo (W)
-							snd.channel2.setFrequencyLo(val);
-							break;
-						case 0xFF19: // Channel 2 Frequency Hi (R/W)
-							snd.channel2.setSoundLength(val & BIT7);
-							snd.channel2.setCounter(val & BIT6);
-							snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
-							if((val & BIT7) == -1)
-								snd.channel2.setSoundLength(-1);
-							
-							return (NR24 = (val & BIT6));
-						
-						case 0xFF0F:
-							return (IF = val);
-						case 0xFF40:
-							return (LCDC = val);
-						case 0xFF41:
-							return (STAT = ((val & 0xF8) | (STAT & 0x07)));
-						case 0xFF42:
-							return (SCY = val);
-						case 0xFF43:
-							return (SCX = val);
-						case 0xFF44:
-							return LY; // read only
-						case 0xFF45:
-							return (LYC = val);
-						case 0xFF46:
-							index = val << 8;
-							for (int i = 0; i < 0xA0; i++)
-								OAM[i] = readMem(index + i);
-							return (DMA = val);
-						case 0xFF47:
-							colorBG[0] = color[val & (BIT1 | BIT0)];
-							colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
-							colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
-							colorBG[3] = color[val >> 6];
-							return (BGP = val);
-						case 0xFF48:
-							colorSP0[1] = color[(val & (BIT3 | BIT2)) >> 2];
-							colorSP0[2] = color[(val & (BIT5 | BIT4)) >> 4];
-							colorSP0[3] = color[val >> 6];
-							return (OBP0 = val);
-						case 0xFF49:
-							colorSP1[1] = color[(val & (BIT3 | BIT2)) >> 2];
-							colorSP1[2] = color[(val & (BIT5 | BIT4)) >> 4];
-							colorSP1[3] = color[val >> 6];
-							return (OBP1 = val);
-						case 0xFF4A:
-							return (WY = val);
-						case 0xFF4B:
-							return (WX = val);
-						case 0xFFFF:
-							return (IE = val);
-						
-						default:
-						{
-							//System.out.printf("Writing %d to %4X\n", val, index);
-							return (HRAM[index-0xFF00] = val);
-						}
-					}
-					
-					default:
-						return val; // cannot write to ROM
-				}
-			/*
+			case 0: break;
 			case 1:
-				switch (index >> 8)
+				switch (index >> 13)
 				{
-					//...
+					case 0: // $0x0000-0x1FFF
+						return val;
+					case 1: // $0x2000-0x3FFF
+						int bank = (val & 0x1F);
+						if (bank == 0)
+							bank = 1;
+						bank |= mbcSig;
+						System.out.println(Integer.toBinaryString(val) + " out of " + Integer.toBinaryString(rom.numROMBanks));
+						if (bank < rom.numROMBanks)
+							ROMbank = rom.getROM(bank);
+						return val;
+					case 2: // $0x4000-0x5FFF
+						if (mbcMode == 0)
+							mbcSig = (val & 0x03) << 5;
+						else
+							RAMbank = rom.getRAM(val & 0x03);
+						return val;
+					case 3: // $0x6000-0x7FFF
+						mbcMode = val & 0x01;
+						if (mbcMode == 0)
+							RAMbank = rom.getRAM(0);
+						else
+							mbcSig = 0;
+						return val;
 				}
 			break;
 			
 			case 2:
-				switch (index >> 8)
+				switch (index >> 13)
 				{
-					//...
+					case 0: // $0x0000-0x1FFF
+						return val;
+					case 1: // $0x2000-0x3FFF
+						if ((index & 0x10) == 0)
+							return val;
+						int bank = (val & 0x0F);
+						if (bank == 0)
+							bank = 1;
+						ROMbank = rom.getROM(bank);
+						return val;
+					case 2: // $0x4000-0x5FFF
+						return val;
+					case 3: // $0x6000-0x7FFF
+						return val;
 				}
 			break;
 			
 			case 3:
-				switch (index >> 8)
+				switch (index >> 13)
 				{
-					//...
+					case 0: // $0x0000-0x1FFF
+						return val;
+					case 1: // $0x2000-0x3FFF
+						int bank = (val & 0x7F);
+						if (bank == 0)
+							bank = 1;
+						ROMbank = rom.getROM(bank);
+						return val;
+					case 2: // $0x4000-0x5FFF
+						RAMbank = rom.getRAM(val & 0x03);
+						return val;
+					case 3: // $0x6000-0x7FFF
+						return val;
 				}
 			break;
 			
 			case 5:
-				switch (index >> 8)
+				switch (index >> 13)
 				{
 					//...
 				}
 			break;
 			
-			default: throw new AssertionError("Invalid MBC type");*/
+			default: throw new AssertionError("Invalid MBC type");
+		}
+		
+		switch (index >> 8)
+		{
+			case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x86: case 0x87: 
+			case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8E: case 0x8F: 
+			case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97: 
+			case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F: 
+				return (VRAM[index-0x8000] = val);
+			
+			case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7: 
+			case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF: 
+			case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7: 
+			case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF: 
+				return (RAMbank[index-0xA000] = val);
+			
+			case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7: 
+			case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF: 
+			case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: case 0xD7: 
+			case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF: 
+				return (RAM[index-0xC000] = val);
+			
+			case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: 
+			case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF: 
+			case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7: 
+			case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: 
+				return (RAM[index-0xE000] = val); // echo internal RAM if in range [E000, FDFF]
+			
+			case 0xFE:
+				return (OAM[index-0xFE00] = val);
+			
+			case 0xFF:
+			switch(index)
+			{
+				// Handle IO ports
+				case 0xFF00: //Joypad
+					return (P1 = val);
+				case 0xFF01:
+					return SB;
+				case 0xFF02:
+					if ((val & BIT7) != 0 && (val & BIT0) != 0)
+							newSerialInt = 10;
+					return (SC = val);
+				case 0xFF04:
+					return (DIV = 0);
+				case 0xFF05:
+					return (TIMA = val);
+				case 0xFF06:
+					return (TMA = val);
+				case 0xFF07:
+					return (TAC = val);
+				case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
+					snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
+					snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
+					return (NR21 = (val & (BIT6 | BIT7)));
+				case 0xFF17: // Channel 2 Volume Envelope (R/W)
+					snd.channel2.setVolumeEnvelope(
+					((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
+					return val;
+				case 0xFF18: // Channel 2 Frequency Lo (W)
+					snd.channel2.setFrequencyLo(val);
+					break;
+				case 0xFF19: // Channel 2 Frequency Hi (R/W)
+					snd.channel2.setSoundLength(val & BIT7);
+					snd.channel2.setCounter(val & BIT6);
+					snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
+					if((val & BIT7) == -1)
+						snd.channel2.setSoundLength(-1);
+					
+					return (NR24 = (val & BIT6));
+				
+				case 0xFF0F:
+					return (IF = val);
+				case 0xFF40:
+					return (LCDC = val);
+				case 0xFF41:
+					return (STAT = ((val & 0xF8) | (STAT & 0x07)));
+				case 0xFF42:
+					return (SCY = val);
+				case 0xFF43:
+					return (SCX = val);
+				case 0xFF44:
+					return LY; // read only
+				case 0xFF45:
+					return (LYC = val);
+				case 0xFF46:
+					index = val << 8;
+					for (int i = 0; i < 0xA0; i++)
+						OAM[i] = readMem(index + i);
+					return (DMA = val);
+				case 0xFF47:
+					colorBG[0] = color[val & (BIT1 | BIT0)];
+					colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
+					colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
+					colorBG[3] = color[val >> 6];
+					return (BGP = val);
+				case 0xFF48:
+					colorSP0[1] = color[(val & (BIT3 | BIT2)) >> 2];
+					colorSP0[2] = color[(val & (BIT5 | BIT4)) >> 4];
+					colorSP0[3] = color[val >> 6];
+					return (OBP0 = val);
+				case 0xFF49:
+					colorSP1[1] = color[(val & (BIT3 | BIT2)) >> 2];
+					colorSP1[2] = color[(val & (BIT5 | BIT4)) >> 4];
+					colorSP1[3] = color[val >> 6];
+					return (OBP1 = val);
+				case 0xFF4A:
+					return (WY = val);
+				case 0xFF4B:
+					return (WX = val);
+				case 0xFFFF:
+					return (IE = val);
+				
+				default:
+				{
+					//System.out.printf("Writing %d to %4X\n", val, index);
+					return (HRAM[index-0xFF00] = val);
+				}
+			}
+			
+			default:
+				return val; // cannot write to ROM
 		}
 		//throw new AssertionError("writeMem() did not return a value");
 	}
@@ -538,7 +602,7 @@ public class CPU extends Thread
 				{
 					//System.out.println(Integer.toBinaryString(P1));
 			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
-			   		System.out.printf("Instruction %02X at %04X\n", readMem(PC), PC);
+					System.out.printf("Instruction %02X at %04X\n", readMem(PC), PC);
 			   		visited[PC] = true;
 				}
 			
@@ -3803,6 +3867,17 @@ public class CPU extends Thread
 						STAT = (STAT & 0xFC) | 0x03;
 					else
 					{
+						if (newSerialInt > 0)
+						{
+							newSerialInt--;
+							if (newSerialInt == 0)
+							{
+								SB = 0xFF;
+								SC &= ~BIT7;
+								IF |= BIT3;
+							}
+						}
+						
 						//	if(snd.soundEnabled)
 						//		snd.outputSound();
 						
@@ -3836,6 +3911,15 @@ public class CPU extends Thread
 								writeMem(--SP, PC >> 8);
 								writeMem(--SP, PC & 0x00FF);
 								PC = 0x0050;
+							}
+							else if ((IE & BIT3) != 0 && (IF & BIT3) != 0)
+							{
+								//System.out.println("Launching SERIAL interrupt");
+								IF &= ~BIT3;
+								IME = false;
+								writeMem(--SP, PC >> 8);
+								writeMem(--SP, PC & 0x00FF);
+								PC = 0x0058;
 							}
 							else if ((IE & BIT4) != 0 && (IF & BIT4) != 0)
 							{
@@ -4100,7 +4184,7 @@ public class CPU extends Thread
 			if (frameCount == 100)
 			{
 				double secPer100 = (System.nanoTime()-startT) / 1000000000.0;
-				//System.out.println(1.0 / (secPer100 * 0.01) + " fps");
+				System.out.println(1.0 / (secPer100 * 0.01) + " fps");
 				frameCount = 0;
 				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
 				startT = System.nanoTime();
