@@ -4,13 +4,13 @@
 
 import java.io.*;
 
-public class ROM{	
-	public static final int bankSize = 0x4000;
-	public static final int ramSize = 0x2000;
-	public int numROMBanks;
-	public int numRAMBanks;
-	private int rom[][];
-	private int ram[][];
+public final class ROM{	
+	//public static final int bankSize = 0x4000;
+	//public static final int ramSize = 0x2000;
+	public static int numROMBanks;
+	private static int numRAMBanks;
+	private static int rom[][];
+	private static int ram[][];
 	
 	public ROM(String filename){
 		this(new File(filename));
@@ -29,44 +29,39 @@ public class ROM{
 	
 	// Loads the ROM into memory
 	private void load(File file){
-		int firstBank[] = new int[bankSize];
+		int firstBank[] = new int[0x2000];
 		try{
 			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
-			for(int i = 0; i < 0x4000; i++)
-			{
+			for(int i = 0; i < 0x2000; i++)
 				firstBank[i] = buf.read();
-			}
 			
 			numROMBanks = getROMSize(firstBank, true);
-			rom = new int[numROMBanks][bankSize];
+			rom = new int[numROMBanks << 1][0x2000];
 			
-			for(int i = 0; i < 0x4000; i++)
-			{
+			for(int i = 0; i < 0x2000; i++)
 				rom[0][i] = firstBank[i];
-			}
-			for(int j = 1 ; j < numROMBanks; j++)
-				for(int i = 0; i < 0x4000; i++)
-				{
+			
+			for(int j = 1; j < rom.length; j++)
+				for(int i = 0; i < 0x2000; i++)
 					rom[j][i] = buf.read();
-				}
 				
 			buf.close();
 			
 			numRAMBanks = getRAMSize(true);
 			if(numRAMBanks != 0)
-				ram = new int[numRAMBanks][ramSize];
+				ram = new int[numRAMBanks][0x2000];
 		}
 		catch(Exception e){ e.printStackTrace(); }
 	}
 	
-	public int[] getDefaultROM()
+	public int[] getDefaultROM(int lsb)
 	{
-		return rom[0];
+		return rom[lsb];
 	}
 	
-	public int[] getROM(int bank)
+	public int[] getROM(int bank, int lsb)
 	{
-		return rom[bank];
+		return rom[(bank << 1) | lsb];
 	}
 	
 	public int[] getRAM(int bank)
