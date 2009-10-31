@@ -447,6 +447,7 @@ public final class CPU extends Thread
 		int nextHBlank = CYCLES_PER_LINE;
 		int nextVBlank = CYCLES_PER_LINE*144;
 		int[] myColor;
+		final int[] VRAM = mem[4];
 		final int[] HRAM = mem[7];
 		
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
@@ -3738,9 +3739,9 @@ public final class CPU extends Thread
 								{
 									//int tileNum;
 									//if ((HRAM[0x1F40] & BIT3) != 0)
-									//	tileNum = mem[4][0x1C00 + crntVal];
+									//	tileNum = VRAM[0x1C00 + crntVal];
 									//else
-									int tileNum = mem[4][0x1800 + ((HRAM[0x1F40] & BIT3) << 7) + crntVal];
+									int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT3) << 7) + crntVal];
 									
 									int tileIndex;
 									
@@ -3763,8 +3764,8 @@ public final class CPU extends Thread
 										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
 									//System.out.println("** " + tileNum);
 									//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
-										int colorVal = ((mem[4][byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-													   ((mem[4][byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+													   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 										
 										screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
 										xPix++;
@@ -3834,8 +3835,8 @@ public final class CPU extends Thread
 											int bitPos = (y << 4) + x; // 16*y + x
 											int byteIndex = (patternNum << 4) + (bitPos >> 3); // patternIndex + (bitPos/8)
 											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-											int colorVal = ((mem[4][byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-														   ((mem[4][byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											
 											if (colorVal != 0)
 											{
@@ -3890,8 +3891,8 @@ public final class CPU extends Thread
 											int bitPos = (y << 4) + x; // 16*y + x
 											int byteIndex = (patternNum << 4) + (bitPos >> 3); // patternIndex + (bitPos/8)
 											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-											int colorVal = ((mem[4][byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-														   ((mem[4][byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											
 											if (colorVal != 0)
 											{
