@@ -2,11 +2,13 @@ import java.awt.*;
 import java.awt.image.*;
 import java.awt.event.*;
 import java.io.*;
+import java.util.concurrent.*;
 
-public class GUI implements KeyListener//, FrameListener
+public final class GUI implements KeyListener//, FrameListener
 {
 	public static final int screenWidth = 160;
 	public static final int screenHeight = 144;
+	private static Semaphore sem;
 	private static CPU cpu;
 	private static Graphics g;
 	private static BufferedImage screen;
@@ -14,10 +16,11 @@ public class GUI implements KeyListener//, FrameListener
 	private static int zoom;
 	private static int delayZoom;
 	private static GraphicsEnvironment ge;
-    private static GraphicsDevice gd;
+	private static GraphicsDevice gd;
 	private static Frame frame;
 	private static Frame keyframe;
 	private static Insets ins;
+	private static ScreenRenderer render;
 	private static boolean fullScreen = false;
 	private static boolean buttonLEFT = false;
 	private static boolean buttonRIGHT = false;
@@ -27,14 +30,14 @@ public class GUI implements KeyListener//, FrameListener
 	private static boolean buttonB = false;
 	private static boolean buttonSTART = false;
 	private static boolean buttonSELECT = false;
-	public static int keyLEFT = KeyEvent.VK_LEFT;
-	public static int keyRIGHT = KeyEvent.VK_RIGHT;
-	public static int keyUP = KeyEvent.VK_UP;
-	public static int keyDOWN = KeyEvent.VK_DOWN;
-	public static int keyA = KeyEvent.VK_X;
-	public static int keyB = KeyEvent.VK_Z;
-	public static int keySTART = KeyEvent.VK_ENTER;
-	public static int keySELECT = KeyEvent.VK_SPACE;
+	private static int keyLEFT = KeyEvent.VK_LEFT;
+	private static int keyRIGHT = KeyEvent.VK_RIGHT;
+	private static int keyUP = KeyEvent.VK_UP;
+	private static int keyDOWN = KeyEvent.VK_DOWN;
+	private static int keyA = KeyEvent.VK_X;
+	private static int keyB = KeyEvent.VK_Z;
+	private static int keySTART = KeyEvent.VK_ENTER;
+	private static int keySELECT = KeyEvent.VK_SPACE;
 	
 	public static void main(String[] args)
 	{
@@ -47,13 +50,13 @@ public class GUI implements KeyListener//, FrameListener
 		gd = ge.getDefaultScreenDevice();
 		System.out.println(gd.isFullScreenSupported());
 	
-    	frame = new Frame("GameGuha");
-    	MenuBar mb = new MenuBar();
-    	mb.add(new FileMenu(frame, this));
-    	mb.add(new ViewMenu());
-    	mb.add(new SoundMenu());
+	    	frame = new Frame("GameGuha");
+	    	MenuBar mb = new MenuBar();
+	    	mb.add(new FileMenu(frame, this));
+	    	mb.add(new ViewMenu());
+	    	mb.add(new SoundMenu());
 		
-    	frame.setMenuBar(mb);
+	    	frame.setMenuBar(mb);
     	
 		frame.setResizable(false);
 		frame.setVisible(true); 
@@ -97,137 +100,22 @@ public class GUI implements KeyListener//, FrameListener
 			int[] arr = {0};
 			drawFrame(arr);
 		}*/
+
+		sem = new Semaphore(0);
+		
+		render = new ScreenRenderer(sem);
+		render.start();
 	}
 	
 	public void newFrame(int[] gbScreen)
 	{
 		if (zoom != delayZoom)
 			changeZoom();
-		
-		int[] buffer = imgBuffer;
-				
-		int xPixel, yPixel, col;
-		
-		switch (zoom)
-		{
-			case 1:
-				System.arraycopy(gbScreen, 0, buffer, 0, buffer.length);
-			break;
 			
-			case 2:
-				int x;
-				int y1;
-				int y2 = -(screenWidth*2);
-				for(yPixel = 0; yPixel < 144; yPixel++)
-				{
-					y1 = y2+320;
-					y2 = y1+320;
-					
-					for (x = 0; x < 320; x++)
-					{
-						xPixel = x >> 1;
-						
-						col = gbScreen[yPixel*screenWidth + xPixel];
-	
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-					}
-				}
-			break;
-			
-			case 3:
-				int y3 = -(screenWidth*3);
-				for(yPixel = 0; yPixel < 144; yPixel++)
-				{
-					y1 = y3+480;
-					y2 = y1+480;
-					y3 = y2+480;
-					x = 0;
-					
-					for (xPixel = 0; xPixel < 160; xPixel++)
-					{
-						col = gbScreen[yPixel*screenWidth + xPixel];
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						
-						x++;
-					}
-				}
-			break;
-			
-			case 4:
-				int y4 = -(screenWidth*4);
-				for(yPixel = 0; yPixel < 144; yPixel++)
-				{
-					y1 = y4+640;
-					y2 = y1+640;
-					y3 = y2+640;
-					y4 = y3+640; 
-					
-					for (x = 0; x < 640; x++)
-					{
-						xPixel = x >> 2;
-						
-						col = gbScreen[yPixel*screenWidth + xPixel];
-	
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						buffer[x + y4] = col;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						buffer[x + y4] = col;;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						buffer[x + y4] = col;
-						
-						x++;
-						
-						buffer[x + y1] = col;
-						buffer[x + y2] = col;
-						buffer[x + y3] = col;
-						buffer[x + y4] = col;
-					}
-				}
-			break;
-			
-			default: throw new AssertionError("Zoom mode not supported");
-		}
-		
-		//((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-		ins = frame.getInsets();
-		
-		if (fullScreen)
-			g.drawImage(screen, ins.left, ins.top, frame.getWidth() - ins.left - ins.right, frame.getHeight() - ins.top - ins.bottom, null);
-		else
-			g.drawImage(screen, ins.left, ins.top, null);
+		render.setReferences(imgBuffer, gbScreen, frame, g, zoom, fullScreen, screen);
+		sem.drainPermits();
+		sem.release();
+		//render.requestFrame();
 	}
 	
 	public void setZoom(int delayZoom)
@@ -402,28 +290,36 @@ public class GUI implements KeyListener//, FrameListener
 				f.setVisible(true);
 				String file = f.getFile();
 				if(file != null){
-					ROM rom = new ROM(f.getDirectory()+file);
-			        // So this starts the CPU if it's a valid ROM
-					if(rom.verifyChecksum()){
-						/* Since we need to pass the ROM, unless we put some
-						 * global variable for the ROM, we can't have it in
-						 * another "start" option for now.
-						 */
-						
-						if(cpu != null){
+					if(cpu!=null)
+					{
+						// Resume if paused
+						if(cpu.getWaiting())
 							synchronized(cpu)
 							{
-							System.out.println("Thread: "+cpu+ " Halted");	
-							cpu.setHalt(true);
-							cpu = null;
+								cpu.setWaiting(false);
+								cpu.notify();
 							}
+						// Done resume
+						
+						synchronized(cpu)
+						{
+							System.out.println("Thread: "+cpu+ " Halted");
+							cpu.setHalt(true);	
 						}
 						
-						cpu = new CPU(rom, gui);
-						//cpu.addFrameListener(this);
-						cpu.start();
+						while(cpu != null && cpu.isAlive())
+						{
+							System.out.println("waiting");
+							try
+							{
+								Thread.sleep(10);
+							}
+							catch(InterruptedException ie) {}
+						}
 					}
-					// Should we output something for "Invalid ROM?"
+					
+					cpu = new CPU(f.getDirectory()+file, gui);
+					cpu.start();
 				}
 			}
 			else if(item.equals("Run")){
@@ -434,9 +330,9 @@ public class GUI implements KeyListener//, FrameListener
 					else
 						synchronized(cpu)
 						{
-						cpu.setWaiting(false);
-						cpu.notify();
-						System.out.println("Thread: "+cpu+ " Resumed");
+							cpu.setWaiting(false);
+							cpu.notify();
+							System.out.println("Thread: "+cpu+ " Resumed");
 						}
 				}
 				else
