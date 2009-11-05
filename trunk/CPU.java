@@ -20,6 +20,8 @@ public final class CPU extends Thread
 	}*/
 	//boolean[] visited = new boolean[0x10000];
 	
+	private static final boolean throttle = false;
+	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
 	public static final int BIT5 = 1<<5;
@@ -35,6 +37,7 @@ public final class CPU extends Thread
 	private static final int CARRY      = BIT4;
 	
 	private static final int CYCLES_PER_LINE = 114; // (1048576 Hz/ 9198 Hz)
+	private static final long nsPerFrame = (long)(1000000000/59.73);
 	
 	private static final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
 	
@@ -73,10 +76,14 @@ public final class CPU extends Thread
 	private static boolean halt;
 	private static int newSerialInt;
 	private static boolean joypadFlag;
+	private static boolean colorsChanged;
 	
 	private static final int[] colorBG = new int[4];
 	private static final int[] colorSP0 = new int[4];
 	private static final int[] colorSP1 = new int[4];
+	
+	private static final int[] dirtyTiles1 = new int[16];
+	private static final int[] dirtyTiles2 = new int[16];
 	
 	//private EventListenerList frameListeners = new EventListenerList();
 	
@@ -119,9 +126,6 @@ public final class CPU extends Thread
 	public void joypadInt()
 	{
 		//System.out.println("joypad interrupt requested");
-		
-		
-		// TO: FLAG HERE
 		joypadFlag = true;
 	}
 	
@@ -183,26 +187,24 @@ public final class CPU extends Thread
 	
 	private static final int writeMem(final int[][] mem, final int index, final int val)
 	{
-		final int upper = index >> 13;
-		
-		switch(mbc)
+		switch (index >> 8)
 		{
-			case 0:
-				switch (upper)
+			case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07:
+			case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F:
+			case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
+			case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
+				return val;
+			
+			case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
+			case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
+			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
+			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+				switch(mbc)
 				{
-					case 0: // $0x0000-0x1FFF
-					case 1: // $0x2000-0x3FFF
-					case 2: // $0x4000-0x5FFF
-					case 3: // $0x6000-0x7FFF
+					case 0:
 						return val;
-				}
-			break;
-			case 1:
-				switch (upper)
-				{
-					case 0: // $0x0000-0x1FFF
-						return val;
-					case 1: // $0x2000-0x3FFF
+					
+					case 1:
 						int bank = (val & 0x1F);
 						if (bank == 0)
 							bank = 1;
@@ -214,195 +216,324 @@ public final class CPU extends Thread
 							mem[3] = rom.getROM(bank, 1);
 						}
 						return val;
-					case 2: // $0x4000-0x5FFF
+					
+					case 2:
+						if ((index & 0x10) == 0)
+							return val;
+						bank = (val & 0x0F);
+						if (bank == 0)
+							bank = 1;
+						mem[2] = rom.getROM(bank, 0);
+						mem[3] = rom.getROM(bank, 1);
+						return val;
+					
+					case 3:
+						bank = (val & 0x7F);
+						if (bank == 0)
+							bank = 1;
+						mem[2] = rom.getROM(bank, 0);
+						mem[3] = rom.getROM(bank, 1);
+						return val;
+					
+					case 5:
+						//...
+						return val;
+					
+					default:
+						throw new AssertionError("Invalid MBC Type");		
+				}
+			
+			case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x46: case 0x47:
+			case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F:
+			case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: case 0x57:
+			case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5E: case 0x5F:
+				switch(mbc)
+				{
+					case 0:
+						return val;
+					
+					case 1:
 						if (mbcMode == 0)
 							mbcSig = (val & 0x03) << 5;
 						else
 							mem[5] = rom.getRAM(val & 0x03);
 						return val;
-					case 3: // $0x6000-0x7FFF
+					
+					case 2:
+						return val;
+					
+					case 3:
+						mem[5] = rom.getRAM(val & 0x03);
+						return val;
+					
+					case 5:
+						//...
+						return val;
+					
+					default:
+						throw new AssertionError("Invalid MBC Type");
+				}
+			
+			case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67:
+			case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F:
+			case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x76: case 0x77:
+			case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F:
+				switch(mbc)
+				{
+					case 0:
+						return val;
+					
+					case 1:
 						mbcMode = val & 0x01;
 						if (mbcMode == 0)
 							mem[5] = rom.getRAM(0);
 						else
 							mbcSig = 0;
 						return val;
+					
+					case 2:
+					case 3:
+						return val;
+					
+					case 5:
+						//...
+						return val;
+					
+					default:
+						throw new AssertionError("Invalid MBC Type");
 				}
-			break;
 			
-			case 2:
-				switch (upper)
-				{
-					case 0: // $0x0000-0x1FFF
-						return val;
-					case 1: // $0x2000-0x3FFF
-						if ((index & 0x10) == 0)
-							return val;
-						int bank = (val & 0x0F);
-						if (bank == 0)
-							bank = 1;
-						mem[2] = rom.getROM(bank, 0);
-						mem[3] = rom.getROM(bank, 1);
-						return val;
-					case 2: // $0x4000-0x5FFF
-						return val;
-					case 3: // $0x6000-0x7FFF
-						return val;
-				}
-			break;
-			
-			case 3:
-				switch (upper)
-				{
-					case 0: // $0x0000-0x1FFF
-						return val;
-					case 1: // $0x2000-0x3FFF
-						int bank = (val & 0x7F);
-						if (bank == 0)
-							bank = 1;
-						mem[2] = rom.getROM(bank, 0);
-						mem[3] = rom.getROM(bank, 1);
-						return val;
-					case 2: // $0x4000-0x5FFF
-						mem[5] = rom.getRAM(val & 0x03);
-						return val;
-					case 3: // $0x6000-0x7FFF
-						return val;
-				}
-			break;
-			
-			case 5:
-				switch (upper)
-				{
-					//...
-				}
-			break;
-			
-			default: throw new AssertionError("Invalid MBC type");
-		}
-		
-		if ((index >> 8) != 0xFF)
-			return (mem[upper][index & 0x1FFF] = val);
-		
-		switch(index)
-		{
-			// Handle IO ports
-			case 0xFF00: //Joypad
-				/*Button controls
-				7    6      5       4       3     2     1    0
-				[NA][NA][Sel Btn][Sel Dir][D/St][U/Sel][L/B][R/A]*/
-				// Check for Joypad presses
-				// check 5 or 4
-				int temp = (val | 0x0F);
-				if((val & BIT5) == 0)
-				{
-					if(gui.getStart())
-						temp &= ~BIT3;
-
-					if(gui.getSelect())
-						temp &= ~BIT2;
-		
-					if(gui.getB())
-						temp &= ~BIT1;
-		
-					if(gui.getA())
-						temp &= ~BIT0;
-				}
-				else if((val & BIT4) == 0)
-				{
-					if(gui.getDown())
-						temp &= ~BIT3;
-		
-					if(gui.getUp())
-						temp &= ~BIT2;
-
-					if(gui.getLeft())
-						temp &= ~BIT1;
-
-					if(gui.getRight())
-						temp &= ~BIT0;
-				}
-				return (mem[7][0x1F00] = temp);
-			case 0xFF01:
-				return mem[7][0x1F01];
-			case 0xFF02:
-				if ((val & BIT7) != 0 && (val & BIT0) != 0)
-					newSerialInt = 10;
-				return (mem[7][0x1F02] = val);
-			case 0xFF04:
-				return (mem[7][0x1F04] = val);
-			case 0xFF05:
-				return (mem[7][0x1F05] = val);
-			case 0xFF06:
-				return (mem[7][0x1F06] = val);
-			case 0xFF07:
-				return (mem[7][0x1F07] = val);
-			case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
-				snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
-				snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
-				return (mem[7][0x1F16] = (val & (BIT6 | BIT7)));
-			case 0xFF17: // Channel 2 Volume Envelope (R/W)
-				snd.channel2.setVolumeEnvelope(
-				((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
-				return val;
-			case 0xFF18: // Channel 2 Frequency Lo (W)
-				snd.channel2.setFrequencyLo(val);
-				return val;
-			case 0xFF19: // Channel 2 Frequency Hi (R/W)
-				snd.channel2.setSoundLength(val & BIT7);
-				snd.channel2.setCounter(val & BIT6);
-				snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
-				if((val & BIT7) == -1)
-					snd.channel2.setSoundLength(-1);
+			case 0x80:
+				dirtyTiles1[0] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x81:
+				dirtyTiles1[1] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x82:
+				dirtyTiles1[2] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x83:
+				dirtyTiles1[3] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x84:
+				dirtyTiles1[4] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x85:
+				dirtyTiles1[5] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x86:
+				dirtyTiles1[6] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x87:
+				dirtyTiles1[7] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
 				
-				return (mem[7][0x1F19] = (val & BIT6));
+			case 0x88:
+				dirtyTiles1[8] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[0] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x89:
+				dirtyTiles1[9] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[1] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8A:
+				dirtyTiles1[10] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[2] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8B:
+				dirtyTiles1[11] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[3] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8C:
+				dirtyTiles1[12] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[4] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8D:
+				dirtyTiles1[13] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[5] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8E:
+				dirtyTiles1[14] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[6] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x8F:
+				dirtyTiles1[15] |= 1 << ((index & 0x00F0) >> 4);
+				dirtyTiles2[7] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
 			
-			case 0xFF0F:
-				return (mem[7][0x1F0F] = val);
-			case 0xFF40:
-				return (mem[7][0x1F40] = val);
-			case 0xFF41:
-				return (mem[7][0x1F41] = ((val & 0xF8) | (mem[7][0x1F41] & 0x07)));
-			case 0xFF42:
-				return (mem[7][0x1F42] = val);
-			case 0xFF43:
-				return (mem[7][0x1F43] = val);
-			case 0xFF44:
-				return mem[7][0x1F44]; // read only
-			case 0xFF45:
-				return (mem[7][0x1F45] = val);
-			case 0xFF46:
-				int start = val << 8;
-				for (int i = 0; i < 0xA0; i++)
-					mem[7][0x1E00 | i] = readMem(mem, start | i);
-				return (mem[7][0x1F46] = val);
-			case 0xFF47:
-				colorBG[0] = color[val & (BIT1 | BIT0)];
-				colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
-				colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
-				colorBG[3] = color[val >> 6];
-				return (mem[7][0x1F47] = val);
-			case 0xFF48:
-				colorSP0[1] = color[(val & (BIT3 | BIT2)) >> 2];
-				colorSP0[2] = color[(val & (BIT5 | BIT4)) >> 4];
-				colorSP0[3] = color[val >> 6];
-				return (mem[7][0x1F48] = val);
-			case 0xFF49:
-				colorSP1[1] = color[(val & (BIT3 | BIT2)) >> 2];
-				colorSP1[2] = color[(val & (BIT5 | BIT4)) >> 4];
-				colorSP1[3] = color[val >> 6];
-				return (mem[7][0x1F49] = val);
-			case 0xFF4A:
-				return (mem[7][0x1F4A] = val);
-			case 0xFF4B:
-				return (mem[7][0x1F4B] = val);
-			case 0xFFFF:
-				return (mem[7][0x1FFF] = val);
+			case 0x90:
+				dirtyTiles2[8] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x91:
+				dirtyTiles2[9] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x92:
+				dirtyTiles2[10] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x93:
+				dirtyTiles2[11] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x94:
+				dirtyTiles2[12] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x95:
+				dirtyTiles2[13] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x96:
+				dirtyTiles2[14] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+			case 0x97:
+				dirtyTiles2[15] |= 1 << ((index & 0x00F0) >> 4);
+				return (mem[4][index & 0x1FFF] = val);
+
+			case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E: case 0x9F:
+				return (mem[4][index & 0x1FFF] = val);
+			
+			case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA6: case 0xA7:
+			case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAE: case 0xAF:
+			case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB6: case 0xB7:
+			case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF:
+				return (mem[5][index & 0x1FFF] = val);
+			
+			case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC6: case 0xC7:
+			case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCE: case 0xCF:
+			case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+			case 0xD8: case 0xD9: case 0xDA: case 0xDB: case 0xDC: case 0xDD: case 0xDE: case 0xDF:
+				return (mem[6][index & 0x1FFF] = val);
+			
+			case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7:
+			case 0xE8: case 0xE9: case 0xEA: case 0xEB: case 0xEC: case 0xED: case 0xEE: case 0xEF:
+			case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF6: case 0xF7:
+			case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: case 0xFE:
+				return (mem[7][index & 0x1FFF] = val);
+			
+			case 0xFF:
+				switch(index)
+				{
+					// Handle IO ports
+					case 0xFF00: //Joypad
+						/*Button controls
+						7    6      5       4       3     2     1    0
+						[NA][NA][Sel Btn][Sel Dir][D/St][U/Sel][L/B][R/A]*/
+						// Check for Joypad presses
+						// check 5 or 4
+						{int temp = (val | 0x0F);
+						if((val & BIT5) == 0)
+						{
+							if(gui.getStart())
+								temp &= ~BIT3;
+
+							if(gui.getSelect())
+								temp &= ~BIT2;
+				
+							if(gui.getB())
+								temp &= ~BIT1;
+				
+							if(gui.getA())
+								temp &= ~BIT0;
+						}
+						else if((val & BIT4) == 0)
+						{
+							if(gui.getDown())
+								temp &= ~BIT3;
+				
+							if(gui.getUp())
+								temp &= ~BIT2;
+
+							if(gui.getLeft())
+								temp &= ~BIT1;
+
+							if(gui.getRight())
+								temp &= ~BIT0;
+						}
+						return (mem[7][0x1F00] = temp);}
+					case 0xFF01:
+						return mem[7][0x1F01];
+					case 0xFF02:
+						if ((val & BIT7) != 0 && (val & BIT0) != 0)
+							newSerialInt = 10;
+						return (mem[7][0x1F02] = val);
+					case 0xFF04:
+						return (mem[7][0x1F04] = val);
+					case 0xFF05:
+						return (mem[7][0x1F05] = val);
+					case 0xFF06:
+						return (mem[7][0x1F06] = val);
+					case 0xFF07:
+						return (mem[7][0x1F07] = val);
+					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
+						snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
+						snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
+						return (mem[7][0x1F16] = (val & (BIT6 | BIT7)));
+					case 0xFF17: // Channel 2 Volume Envelope (R/W)
+						snd.channel2.setVolumeEnvelope(
+						((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
+						return val;
+					case 0xFF18: // Channel 2 Frequency Lo (W)
+						snd.channel2.setFrequencyLo(val);
+						return val;
+					case 0xFF19: // Channel 2 Frequency Hi (R/W)
+						snd.channel2.setSoundLength(val & BIT7);
+						snd.channel2.setCounter(val & BIT6);
+						snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
+						if((val & BIT7) == -1)
+							snd.channel2.setSoundLength(-1);
+						
+						return (mem[7][0x1F19] = (val & BIT6));
+					
+					case 0xFF0F:
+						return (mem[7][0x1F0F] = val);
+					case 0xFF40:
+						return (mem[7][0x1F40] = val);
+					case 0xFF41:
+						return (mem[7][0x1F41] = ((val & 0xF8) | (mem[7][0x1F41] & 0x07)));
+					case 0xFF42:
+						return (mem[7][0x1F42] = val);
+					case 0xFF43:
+						return (mem[7][0x1F43] = val);
+					case 0xFF44:
+						return mem[7][0x1F44]; // read only
+					case 0xFF45:
+						return (mem[7][0x1F45] = val);
+					case 0xFF46:
+						{int start = val << 8;
+						for (int i = 0; i < 0xA0; i++)
+							mem[7][0x1E00 | i] = readMem(mem, start | i);
+						return (mem[7][0x1F46] = val);}
+					case 0xFF47:
+						if (mem[7][0x1F47] == val)
+							return val;
+						//System.out.println("colors changed");
+						colorsChanged = true;
+						colorBG[0] = color[val & (BIT1 | BIT0)];
+						colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
+						colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
+						colorBG[3] = color[val >> 6];
+						return (mem[7][0x1F47] = val);
+					case 0xFF48:
+						colorSP0[1] = color[(val & (BIT3 | BIT2)) >> 2];
+						colorSP0[2] = color[(val & (BIT5 | BIT4)) >> 4];
+						colorSP0[3] = color[val >> 6];
+						return (mem[7][0x1F48] = val);
+					case 0xFF49:
+						colorSP1[1] = color[(val & (BIT3 | BIT2)) >> 2];
+						colorSP1[2] = color[(val & (BIT5 | BIT4)) >> 4];
+						colorSP1[3] = color[val >> 6];
+						return (mem[7][0x1F49] = val);
+					case 0xFF4A:
+						return (mem[7][0x1F4A] = val);
+					case 0xFF4B:
+						return (mem[7][0x1F4B] = val);
+					case 0xFFFF:
+						return (mem[7][0x1FFF] = val);
+					
+					default:
+						return (mem[7][index & 0x1FFF] = val);
+				}
 			
 			default:
-				return (mem[7][index & 0x1FFF] = val);
+				throw new AssertionError("Invalid memory address");
 		}
-		//throw new AssertionError("writeMem() did not return a value");
 	}
 	
 	public void run()
@@ -436,7 +567,12 @@ public final class CPU extends Thread
 		final int[] FLAG_SUB = new int[257*256];
 		final int[] FLAG_INC = new int[256];
 		final int[] FLAG_DEC = new int[256];
+		
+		final int[] background = new int[256*256];
 		final int[] screen = new int[GUI.screenWidth * GUI.screenHeight];
+		final int[] prevTiles = new int[32*32];
+		int prevTileMap = -1;
+		colorsChanged = true;
 		
 		int val;
 		int memval;
@@ -445,12 +581,18 @@ public final class CPU extends Thread
 		int numCycles = 0;
 		int scanline = 0;
 		int nextHBlank = CYCLES_PER_LINE;
-		int nextVBlank = CYCLES_PER_LINE*144;
+		//int nextVBlank = CYCLES_PER_LINE*144;
 		int[] myColor;
 		final int[] VRAM = mem[4];
 		final int[] HRAM = mem[7];
 		
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
+		
+		/*for (int i = 0; i < 16; i++)
+		{
+			dirtyTiles1[i] = 0x0000FFFF;
+			dirtyTiles2[i] = 0x0000FFFF;
+		}*/
 		
 		/*for (int q = 0; q < 256; q++)
 		{
@@ -458,6 +600,7 @@ public final class CPU extends Thread
 		}*/
 		
 		long startT = System.nanoTime();
+		long prevFrame = System.nanoTime();
 		
 		for(;;) // loop until thread stops
 		{
@@ -471,6 +614,302 @@ public final class CPU extends Thread
 		    	if(halt){
 		    		return;
 		    	}
+			}
+			
+			// Start drawing background
+			if ((HRAM[0x1F40] & BIT0) != 0)
+			{
+				final boolean redraw;
+				if (colorsChanged || prevTileMap != (HRAM[0x1F40] & BIT4))
+				{
+					prevTileMap = (HRAM[0x1F40] & BIT4);
+					redraw = true;
+					//for (int i = 0; i < 1024; i++)
+					//	prevTiles[i] = -1;
+				}
+				else
+					redraw = false;
+		
+				myColor = colorBG;
+			
+				for (int upperByte = 0; upperByte < 0x10000; upperByte += 0x800)
+				{
+					for (int xPix = 0; xPix < 0x100; xPix+=8)
+					{
+						int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT3) << 7) + ((upperByte >> 6) | (xPix >> 3))];
+						
+						int tileIndex;
+						if ((HRAM[0x1F40] & BIT4) != 0)
+						{
+							if (!redraw && (prevTiles[(upperByte >> 6) | (xPix >> 3)] == tileNum) && ((dirtyTiles1[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0))
+								continue;
+							//if ()
+							//	continue;
+							tileIndex = tileNum << 4; // tileNum * 16
+						}
+						else
+						{
+							/*if (tileNum >= 128)
+								tileNum -= 128;
+							else
+								tileNum += 128;*/
+							tileNum = ((byte)(tileNum)) + 128;
+							if (!redraw && (prevTiles[(upperByte >> 6) | (xPix >> 3)] == tileNum) && ((dirtyTiles2[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0))
+								continue;
+							//if ((dirtyTiles2[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0)
+							//	continue;
+							tileIndex = 0x800 + (tileNum << 4);
+						}
+						
+						prevTiles[(upperByte >> 6) | (xPix >> 3)] = tileNum;
+						
+						int byteIndex = upperByte | xPix;
+						int bitSet = BIT7;
+						int byte0 = VRAM[tileIndex];
+						int byte1 = VRAM[tileIndex+1];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+2];
+						byte1 = VRAM[tileIndex+3];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+4];
+						byte1 = VRAM[tileIndex+5];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+6];
+						byte1 = VRAM[tileIndex+7];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+8];
+						byte1 = VRAM[tileIndex+9];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+10];
+						byte1 = VRAM[tileIndex+11];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+12];
+						byte1 = VRAM[tileIndex+13];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+						
+						byteIndex += 249;
+						bitSet = BIT7;
+						byte0 = VRAM[tileIndex+14];
+						byte1 = VRAM[tileIndex+15];
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+						bitSet >>= 1;
+						
+						background[byteIndex++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+						bitSet >>= 1;
+						
+						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+					}
+				}
+			}
+			// Done drawing background
+			
+			/* TEMPORARY CODE */
+			int SCY = HRAM[0x1F42];
+			int SCX = HRAM[0x1F43];
+			
+			for (int yPix = 0; yPix < GUI.screenHeight; yPix++)
+			{
+				int upper = ((yPix+SCY) & 0xFF) << 8;
+				int mult = yPix*GUI.screenWidth;
+				
+				for (int xPix = 0; xPix < GUI.screenWidth; xPix++)
+					screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+			}
+			/* END TEMPORARY CODE */
+			
+			colorsChanged = false;
+			for (int i = 0; i < 16; i++)
+			{
+				dirtyTiles1[i] = 0;
+				dirtyTiles2[i] = 0;
 			}
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
@@ -1252,7 +1691,10 @@ public final class CPU extends Thread
 					break;
 					
 					case 0x76: // HALT
-						numCycles++;
+						if (IME)
+							numCycles = nextHBlank;
+						else
+							numCycles++;
 						//if (IME)
 							//*give control to interrupt handler*
 						//else
@@ -3632,20 +4074,53 @@ public final class CPU extends Thread
 					default: throw new AssertionError("Unsupported opcode");
 				}
 				
-				int cyclesUntilScan = nextHBlank-numCycles;
+				//int cyclesUntilScan = ;
 				
-				if (cyclesUntilScan < 64)
-				{
+				//if (cyclesUntilScan < 64)
+				//{
 					//if (cyclesUntilScan > 0)
 					//	HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | (3 - (HRAM[0x1F41] >> 5));
 					
 					
-					if (cyclesUntilScan > 43)
-						HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | 0x02;
-					else if (cyclesUntilScan > 0)
-						HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | 0x03;
-					else
+					/*if (cyclesUntilScan > 43)
 					{
+						HRAM[0x1F41] |= BIT1;
+						HRAM[0x1F41] &= ~BIT0;
+					}
+					else if (cyclesUntilScan > 0)
+					{
+						HRAM[0x1F41] |= BIT0;
+					}*/
+				
+				switch (nextHBlank-numCycles)
+				{
+					case 114: case 113: case 112: case 111: case 110: case 109: case 108: case 107:
+					case 106: case 105: case 104: case 103: case 102: case 101: case 100: case 99:
+					case 98: case 97: case 96: case 95: case 94: case 93: case 92: case 91:
+					case 90: case 89: case 88: case 87: case 86: case 85: case 84: case 83:
+					case 82: case 81: case 80: case 79: case 78: case 77: case 76: case 75:
+					case 74: case 73: case 72: case 71: case 70: case 69: case 68: case 67:
+					case 66: case 65: case 64:
+					
+					case 57: case 56: case 55: case 54: case 53: case 52: case 51: case 50:
+					case 49: case 48: case 47: case 46: case 45: case 44:
+					
+					case 37: case 36: case 35: case 34: case 33: case 32: case 31: case 30:
+					case 29: case 28: case 27: case 26: case 25: case 24: case 23: case 22:
+					case 21: case 20: case 19: case 18: case 17: case 16: case 15: case 14:
+					case 13: case 12: case 11: case 10: case 9: case 8: case 7: case 6:
+					case 5: case 4: case 3: case 2: case 1:
+						break;
+					
+					case 63: case 62: case 61: case 60: case 59: case 58: 
+						if (scanline < GUI.screenHeight)
+							HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | 2;
+						break;
+					case 43: case 42: case 41: case 40: case 39: case 38:
+						if (scanline < GUI.screenHeight)
+							HRAM[0x1F41] |= 3;
+						break;
+					default:
 						if (newSerialInt > 0)
 						{
 							newSerialInt--;
@@ -3709,7 +4184,6 @@ public final class CPU extends Thread
 								writeMem(mem, --SP, PC & 0x00FF);
 								PC = 0x0060;
 							}
-							
 						}
 						
 						// STOP HANDLING INTERRUPTS
@@ -3717,10 +4191,10 @@ public final class CPU extends Thread
 						// Draw current scanline
 						if (scanline < GUI.screenHeight)
 						{
-							HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC);
+							HRAM[0x1F41] &= ~0x03;
 							if ((HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
 								HRAM[0x1F0F] |= BIT1;
-							
+							/*
 							// Handle BG/Window
 							if ((HRAM[0x1F40] & BIT0) != 0)
 							{
@@ -3787,7 +4261,7 @@ public final class CPU extends Thread
 								}
 							}
 							// Done with BG/Window
-							
+							*/
 							// Handle sprites
 							if ((HRAM[0x1F40] & BIT1) != 0)
 							{
@@ -3922,12 +4396,14 @@ public final class CPU extends Thread
 						
 						if (scanline == GUI.screenHeight)
 						{
+							// TODO: DRAW SPRITES HERE
+							
 							HRAM[0x1F0F] |= BIT0; // Request VBLANK
-							HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | 0x01;
+							HRAM[0x1F41] |= BIT0;
 							if ((HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
 								HRAM[0x1F0F] |= BIT1;
 							
-							nextVBlank += CYCLES_PER_LINE*154;
+							//nextVBlank += CYCLES_PER_LINE*154;
 						}
 						
 						HRAM[0x1F44] = ++scanline;
@@ -3937,7 +4413,7 @@ public final class CPU extends Thread
 						{
 							numCycles &= 0xFFFFF;
 							nextHBlank &= 0xFFFFF;
-							nextVBlank &= 0xFFFFF;
+							//nextVBlank &= 0xFFFFF;
 						}
 						
 						HRAM[0x1F04] = (numCycles >> 6) & 0xFF;
@@ -3949,7 +4425,7 @@ public final class CPU extends Thread
 							if (HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
 								HRAM[0x1F0F] |= BIT2;
 						}
-					}
+					break;
 				}
 			}
 			
@@ -3974,10 +4450,29 @@ public final class CPU extends Thread
 			HRAM[0x1F44] = scanline = 0; // new frame
 			frameCount++;
 			
+			if (throttle)
+			{
+				try
+				{
+					long waitNano = (prevFrame + nsPerFrame) - System.nanoTime() + 500000; // 500k for rounding to nearest ms
+					if (waitNano >= 1000000)
+						Thread.sleep(waitNano / 1000000);
+				}
+				catch (InterruptedException e)
+				{
+				}
+				//while ((System.nanoTime() - prevFrame) < (1000000000/59.73))
+					//Thread.yield();
+			}
+			else
+				Thread.yield();
+			
+			prevFrame = System.nanoTime();
+			
 			if (frameCount == 100)
 			{
 				double secPer100 = (System.nanoTime()-startT) / 1000000000.0;
-				System.out.println((secPer100 * 10) + " ms per frame (" + (166.66666666/secPer100) + "% full speed)");
+				System.out.println((secPer100 * 10) + " ms per frame (" + (167.42/secPer100) + "% full speed)");
 				frameCount = 0;
 				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
 				startT = System.nanoTime();
