@@ -888,29 +888,62 @@ public final class CPU extends Thread
 						background[byteIndex] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
 					}
 				}
+				
+				/* TEMPORARY CODE */
+				int SCY = HRAM[0x1F42];
+				int SCX = HRAM[0x1F43];
+				
+				for (int yPix = 0; yPix < GUI.screenHeight; yPix++)
+				{
+					int upper = ((yPix+SCY) & 0xFF) << 8;
+					int mult = yPix*GUI.screenWidth;
+					
+					for (int xPix = 0; xPix < GUI.screenWidth; xPix++)
+					{
+						// Draw 16 pixels						
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+						xPix++;
+						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+					}
+				}
+				/* END TEMPORARY CODE */
+				
+				colorsChanged = false;
+				for (int i = 0; i < 16; i++)
+				{
+					dirtyTiles1[i] = 0;
+					dirtyTiles2[i] = 0;
+				}
 			}
 			// Done drawing background
-			
-			/* TEMPORARY CODE */
-			int SCY = HRAM[0x1F42];
-			int SCX = HRAM[0x1F43];
-			
-			for (int yPix = 0; yPix < GUI.screenHeight; yPix++)
-			{
-				int upper = ((yPix+SCY) & 0xFF) << 8;
-				int mult = yPix*GUI.screenWidth;
-				
-				for (int xPix = 0; xPix < GUI.screenWidth; xPix++)
-					screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-			}
-			/* END TEMPORARY CODE */
-			
-			colorsChanged = false;
-			for (int i = 0; i < 16; i++)
-			{
-				dirtyTiles1[i] = 0;
-				dirtyTiles2[i] = 0;
-			}
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
