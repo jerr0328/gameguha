@@ -20,7 +20,7 @@ public final class CPU extends Thread
 	}*/
 	//boolean[] visited = new boolean[0x10000];
 	
-	private static final boolean throttle = false;
+	private static final boolean throttle = true;
 	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
@@ -571,6 +571,7 @@ public final class CPU extends Thread
 		final int[] background = new int[256*256];
 		final int[] screen = new int[GUI.screenWidth * GUI.screenHeight];
 		final int[] prevTiles = new int[32*32];
+		int windowOffset = 0;
 		int prevTileMap = -1;
 		colorsChanged = true;
 		
@@ -889,7 +890,7 @@ public final class CPU extends Thread
 					}
 				}
 				
-				/* TEMPORARY CODE */
+				/* TEMPORARY CODE
 				int SCY = HRAM[0x1F42];
 				int SCX = HRAM[0x1F43];
 				
@@ -934,7 +935,7 @@ public final class CPU extends Thread
 						screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
 					}
 				}
-				/* END TEMPORARY CODE */
+				END TEMPORARY CODE */
 				
 				colorsChanged = false;
 				for (int i = 0; i < 16; i++)
@@ -4295,6 +4296,100 @@ public final class CPU extends Thread
 							}
 							// Done with BG/Window
 							*/
+
+							// Handle BG/Window (fast)
+							if ((HRAM[0x1F40] & BIT0) != 0)
+							{
+								int SCY = HRAM[0x1F42];
+								int SCX = HRAM[0x1F43];
+								
+								int upper = ((scanline+SCY) & 0xFF) << 8;
+								int mult = scanline*GUI.screenWidth;
+								
+								for (int xPix = 0; xPix < GUI.screenWidth; xPix++)
+								{
+									// Draw 16 pixels						
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									xPix++;
+									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+								}		
+								
+								// Now handle Window (slow, update later)
+								if ((HRAM[0x1F40] & BIT5) != 0)
+								{
+									myColor = colorBG;
+									
+									int WY = HRAM[0x1F4A];
+									int WX = HRAM[0x1F4B];
+									
+									if (WX <= 166 && scanline >= WY)
+									{
+										int windowX = 0;									
+										for (int xPix = WX-7; xPix < GUI.screenWidth; xPix++)
+										{
+											int crntTile = ((windowOffset >> 3) << 5) + (windowX >> 3);
+											
+											int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT6) << 4) + crntTile];
+											//System.out.println(Integer.toHexString(tileNum));
+						
+											int tileIndex;
+											if ((HRAM[0x1F40] & BIT4) != 0)
+												tileIndex = tileNum << 4; // tileNum * 16
+											else
+												tileIndex = 0x800 + ((((byte)(tileNum)) + 128) << 4);
+											
+											//System.out.println(Integer.toHexString(tileIndex));
+											
+											int bitPos = ((windowOffset & 7) << 4) + (windowX & 7); // 16*y + x
+											int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+
+											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+											               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+										
+											
+											//System.out.printf("writing window (%d, %d) to screen (%d, %d)\n", windowX, windowOffset, xPix, scanline);
+											
+											
+											screen[mult + xPix] = myColor[colorVal];
+											
+											windowX++;
+										}
+										
+										windowOffset++;
+									}
+								}
+							}
+							// Done with BG/Window
+							
 							// Handle sprites
 							if ((HRAM[0x1F40] & BIT1) != 0)
 							{
@@ -4481,6 +4576,7 @@ public final class CPU extends Thread
 			}
 			
 			HRAM[0x1F44] = scanline = 0; // new frame
+			windowOffset = 0;
 			frameCount++;
 			
 			if (throttle)
