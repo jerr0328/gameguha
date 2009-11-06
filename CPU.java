@@ -1,23 +1,5 @@
 public final class CPU extends Thread
 {
-/*	private static class ThreadLocalWaiting extends ThreadLocal
-	{
-		protected boolean pleaseWait=false;
-		protected synchronized Object InitialValue()
-		{
-			return pleaseWait;
-		}
-		
-		public synchronized Object get()
-		{
-			return pleaseWait;
-		}
-		
-		protected synchronized Object set(boolean isWaiting)
-		{
-			pleaseWait = isWaiting;
-		}
-	}*/
 	//boolean[] visited = new boolean[0x10000];
 	
 	private static final boolean throttle = true;
@@ -76,7 +58,6 @@ public final class CPU extends Thread
 	private static boolean halt;
 	private static int newSerialInt;
 	private static boolean joypadFlag;
-	private static boolean colorsChanged;
 	
 	private static final int[] colorBG = new int[4];
 	private static final int[] colorSP0 = new int[4];
@@ -501,10 +482,6 @@ public final class CPU extends Thread
 							mem[7][0x1E00 | i] = readMem(mem, start | i);
 						return (mem[7][0x1F46] = val);}
 					case 0xFF47:
-						if (mem[7][0x1F47] == val)
-							return val;
-						//System.out.println("colors changed");
-						colorsChanged = true;
 						colorBG[0] = color[val & (BIT1 | BIT0)];
 						colorBG[1] = color[(val & (BIT3 | BIT2)) >> 2];
 						colorBG[2] = color[(val & (BIT5 | BIT4)) >> 4];
@@ -573,7 +550,7 @@ public final class CPU extends Thread
 		final int[] prevTiles = new int[32*32];
 		int windowOffset = 0;
 		int prevTileMap = -1;
-		colorsChanged = true;
+		int prevColors = -1;
 		
 		int val;
 		int memval;
@@ -621,8 +598,9 @@ public final class CPU extends Thread
 			if ((HRAM[0x1F40] & BIT0) != 0)
 			{
 				final boolean redraw;
-				if (colorsChanged || prevTileMap != (HRAM[0x1F40] & BIT4))
+				if (prevColors != HRAM[0x1F47] || prevTileMap != (HRAM[0x1F40] & BIT4))
 				{
+					prevColors = HRAM[0x1F47];
 					prevTileMap = (HRAM[0x1F40] & BIT4);
 					redraw = true;
 					//for (int i = 0; i < 1024; i++)
@@ -937,7 +915,6 @@ public final class CPU extends Thread
 				}
 				END TEMPORARY CODE */
 				
-				colorsChanged = false;
 				for (int i = 0; i < 16; i++)
 				{
 					dirtyTiles1[i] = 0;
@@ -4108,6 +4085,60 @@ public final class CPU extends Thread
 					default: throw new AssertionError("Unsupported opcode");
 				}
 				
+				// HANDLE INTERRUPTS HERE
+						
+				if (IME)
+				{
+					// TODO: Replace this with a hardcoded switch statement
+					if ((HRAM[0x1FFF] & BIT0) != 0 && (HRAM[0x1F0F] & BIT0) != 0)
+					{
+						//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
+						HRAM[0x1F0F] &= ~BIT0;
+						IME = false;
+						writeMem(mem, --SP, PC >> 8);
+						writeMem(mem, --SP, PC & 0x00FF);
+						PC = 0x0040;
+					}
+					else if ((HRAM[0x1FFF] & BIT1) != 0 && (HRAM[0x1F0F] & BIT1) != 0)
+					{
+						//System.out.println("Launching LCDC interrupt");
+						HRAM[0x1F0F] &= ~BIT1;
+						IME = false;
+						writeMem(mem, --SP, PC >> 8);
+						writeMem(mem, --SP, PC & 0x00FF);
+						PC = 0x0048;
+					}
+					else if ((HRAM[0x1FFF] & BIT2) != 0 && (HRAM[0x1F0F] & BIT2) != 0)
+					{
+						//System.out.println("Launching TIMER interrupt");
+						HRAM[0x1F0F] &= ~BIT2;
+						IME = false;
+						writeMem(mem, --SP, PC >> 8);
+						writeMem(mem, --SP, PC & 0x00FF);
+						PC = 0x0050;
+					}
+					else if ((HRAM[0x1FFF] & BIT3) != 0 && (HRAM[0x1F0F] & BIT3) != 0)
+					{
+						//System.out.println("Launching SERIAL interrupt");
+						HRAM[0x1F0F] &= ~BIT3;
+						IME = false;
+						writeMem(mem, --SP, PC >> 8);
+						writeMem(mem, --SP, PC & 0x00FF);
+						PC = 0x0058;
+					}
+					else if ((HRAM[0x1FFF] & BIT4) != 0 && (HRAM[0x1F0F] & BIT4) != 0)
+					{
+						//System.out.println("Launching JOYPAD interrupt");
+						HRAM[0x1F0F] &= ~BIT4;
+						IME = false;
+						writeMem(mem, --SP, PC >> 8);
+						writeMem(mem, --SP, PC & 0x00FF);
+						PC = 0x0060;
+					}
+				}
+				
+				// STOP HANDLING INTERRUPTS
+				
 				//int cyclesUntilScan = ;
 				
 				//if (cyclesUntilScan < 64)
@@ -4169,223 +4200,175 @@ public final class CPU extends Thread
 						//	if(snd.soundEnabled)
 						//		snd.outputSound();
 						
-						// HANDLE INTERRUPTS HERE
-						
-						if (IME)
-						{
-							if ((HRAM[0x1FFF] & BIT0) != 0 && (HRAM[0x1F0F] & BIT0) != 0)
-							{
-								//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
-								HRAM[0x1F0F] &= ~BIT0;
-								IME = false;
-								writeMem(mem, --SP, PC >> 8);
-								writeMem(mem, --SP, PC & 0x00FF);
-								PC = 0x0040;
-							}
-							else if ((HRAM[0x1FFF] & BIT1) != 0 && (HRAM[0x1F0F] & BIT1) != 0)
-							{
-								//System.out.println("Launching LCDC interrupt");
-								HRAM[0x1F0F] &= ~BIT1;
-								IME = false;
-								writeMem(mem, --SP, PC >> 8);
-								writeMem(mem, --SP, PC & 0x00FF);
-								PC = 0x0048;
-							}
-							else if ((HRAM[0x1FFF] & BIT2) != 0 && (HRAM[0x1F0F] & BIT2) != 0)
-							{
-								//System.out.println("Launching TIMER interrupt");
-								HRAM[0x1F0F] &= ~BIT2;
-								IME = false;
-								writeMem(mem, --SP, PC >> 8);
-								writeMem(mem, --SP, PC & 0x00FF);
-								PC = 0x0050;
-							}
-							else if ((HRAM[0x1FFF] & BIT3) != 0 && (HRAM[0x1F0F] & BIT3) != 0)
-							{
-								//System.out.println("Launching SERIAL interrupt");
-								HRAM[0x1F0F] &= ~BIT3;
-								IME = false;
-								writeMem(mem, --SP, PC >> 8);
-								writeMem(mem, --SP, PC & 0x00FF);
-								PC = 0x0058;
-							}
-							else if ((HRAM[0x1FFF] & BIT4) != 0 && (HRAM[0x1F0F] & BIT4) != 0)
-							{
-								//System.out.println("Launching JOYPAD interrupt");
-								HRAM[0x1F0F] &= ~BIT4;
-								IME = false;
-								writeMem(mem, --SP, PC >> 8);
-								writeMem(mem, --SP, PC & 0x00FF);
-								PC = 0x0060;
-							}
-						}
-						
-						// STOP HANDLING INTERRUPTS
-						
 						// Draw current scanline
 						if (scanline < GUI.screenHeight)
 						{
 							HRAM[0x1F41] &= ~0x03;
 							if ((HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
 								HRAM[0x1F0F] |= BIT1;
-							/*
+							
 							// Handle BG/Window
 							if ((HRAM[0x1F40] & BIT0) != 0)
 							{
 								myColor = colorBG;
-								
-								int xPix = 0;
-								// x = HRAM[0x1F43] % 8
-								int x = HRAM[0x1F43] & 0x7;
-								// y = (HRAM[0x1F42] + scanline) % 8
-								int y = (HRAM[0x1F42] + scanline) & 0x7;
-								// crntVal = ((((HRAM[0x1F42] + scanline) % 256) / 8) * 32) * (HRAM[0x1F43] / 8)
-								int crntVal = ((((HRAM[0x1F42] + scanline) & 0xFF) >> 3) << 5) + (HRAM[0x1F43] >> 3);
-								// maxVal = ((crntVal + 32) / 32) * 32
-								int maxVal = (crntVal + 32) & ~0x1F;
-						outer:	for(;;)
-								{
-									//int tileNum;
-									//if ((HRAM[0x1F40] & BIT3) != 0)
-									//	tileNum = VRAM[0x1C00 + crntVal];
-									//else
-									int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT3) << 7) + crntVal];
-									
-									int tileIndex;
-									
-									if ((HRAM[0x1F40] & BIT4) != 0)
-									{
-									//System.out.println("**1**");
-										tileIndex = tileNum << 4; // tileNum * 16
-									}
-									else
-									{
-									//System.out.println("**2**");	
-										tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
-									}
-									
-									while (x < 8)
-									{
-										int bitPos = (y << 4) + x; // 16*y + x
-										int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
-									//System.out.println("Grabbing bit " + (bitPos%8));
-										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-									//System.out.println("** " + tileNum);
-									//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
-										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-													   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
-										
-										screen[scanline*GUI.screenWidth + xPix] = myColor[colorVal];
-										xPix++;
-										if (xPix >= GUI.screenWidth)
-											break outer;
-										x++;
-									}
-									
-									x = 0;
-									crntVal++;
-									if (crntVal >= maxVal)
-										crntVal -= 32;
-								}
-								
-								// To-do: Now handle Window
-								if ((HRAM[0x1F40] & BIT5) != 0)
-								{
-									//...
-								}
-							}
-							// Done with BG/Window
-							*/
-
-							// Handle BG/Window (fast)
-							if ((HRAM[0x1F40] & BIT0) != 0)
-							{
-								int SCY = HRAM[0x1F42];
-								int SCX = HRAM[0x1F43];
-								
-								int upper = ((scanline+SCY) & 0xFF) << 8;
 								int mult = scanline*GUI.screenWidth;
-								
-								for (int xPix = 0; xPix < GUI.screenWidth; xPix++)
-								{
-									// Draw 16 pixels						
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-									xPix++;
-									screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
-								}		
-								
-								// Now handle Window (slow, update later)
+								int upto = GUI.screenWidth;
+								int WY, WX;
 								if ((HRAM[0x1F40] & BIT5) != 0)
 								{
-									myColor = colorBG;
-									
-									int WY = HRAM[0x1F4A];
-									int WX = HRAM[0x1F4B];
-									
+									WY = HRAM[0x1F4A];
+									WX = HRAM[0x1F4B];
 									if (WX <= 166 && scanline >= WY)
+										upto = WX-7;
+								}
+								
+								/*boolean dumb = false;
+								for (int i = 0; i < 16; i++)
+								{
+									if (dirtyTiles1[i] != 0 || dirtyTiles2[i] != 0)
 									{
-										int windowX = 0;									
-										for (int xPix = WX-7; xPix < GUI.screenWidth; xPix++)
-										{
-											int crntTile = ((windowOffset >> 3) << 5) + (windowX >> 3);
-											
-											int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT6) << 4) + crntTile];
-											//System.out.println(Integer.toHexString(tileNum));
-						
-											int tileIndex;
-											if ((HRAM[0x1F40] & BIT4) != 0)
-												tileIndex = tileNum << 4; // tileNum * 16
-											else
-												tileIndex = 0x800 + ((((byte)(tileNum)) + 128) << 4);
-											
-											//System.out.println(Integer.toHexString(tileIndex));
-											
-											int bitPos = ((windowOffset & 7) << 4) + (windowX & 7); // 16*y + x
-											int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
-											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-
-											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-											               ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+										dumb = true;
+										break;
+									}
+								}*/
+								
+								// Draw Background
+								if (prevColors != HRAM[0x1F47] || prevTileMap != (HRAM[0x1F40] & BIT4)) // have to use slow method
+								{
+									int xPix = 0;
+									// x = HRAM[0x1F43] % 8
+									int x = HRAM[0x1F43] & 0x7;
+									// y = (HRAM[0x1F42] + scanline) % 8
+									int y = (HRAM[0x1F42] + scanline) & 0x7;
+									// crntVal = ((((HRAM[0x1F42] + scanline) % 256) / 8) * 32) * (HRAM[0x1F43] / 8)
+									int crntVal = ((((HRAM[0x1F42] + scanline) & 0xFF) >> 3) << 5) + (HRAM[0x1F43] >> 3);
+									// maxVal = ((crntVal + 32) / 32) * 32
+									int maxVal = (crntVal + 32) & ~0x1F;
+							outer:	for(;;)
+									{
+										//int tileNum;
+										//if ((HRAM[0x1F40] & BIT3) != 0)
+										//	tileNum = VRAM[0x1C00 + crntVal];
+										//else
+										int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT3) << 7) + crntVal];
 										
-											
-											//System.out.printf("writing window (%d, %d) to screen (%d, %d)\n", windowX, windowOffset, xPix, scanline);
-											
-											
-											screen[mult + xPix] = myColor[colorVal];
-											
-											windowX++;
+										int tileIndex;
+										
+										if ((HRAM[0x1F40] & BIT4) != 0)
+										{
+										//System.out.println("**1**");
+											tileIndex = tileNum << 4; // tileNum * 16
+										}
+										else
+										{
+										//System.out.println("**2**");	
+											tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
 										}
 										
-										windowOffset++;
+										while (x < 8)
+										{
+											int bitPos = (y << 4) + x; // 16*y + x
+											int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+										//System.out.println("Grabbing bit " + (bitPos%8));
+											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+										//System.out.println("** " + tileNum);
+										//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
+											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+											
+											screen[mult + xPix] = myColor[colorVal];
+											xPix++;
+											if (xPix >= upto)
+												break outer;
+											x++;
+										}
+										
+										x = 0;
+										crntVal++;
+										if (crntVal >= maxVal)
+											crntVal -= 32;
 									}
+								}
+								else // used cached tiles, fast
+								{
+									int SCY = HRAM[0x1F42];
+									int SCX = HRAM[0x1F43];
+									
+									int upper = ((scanline+SCY) & 0xFF) << 8;
+									
+									for (int xPix = 0; xPix < upto; xPix++)
+									{
+										// Draw 16 pixels						
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+										xPix++;
+										screen[mult + xPix] = background[upper | ((xPix+SCX) & 0xFF)];
+									}
+								}
+								
+								// Now handle Window (slow, update later)
+								if (upto < GUI.screenWidth)
+								{
+									int windowX = 0;									
+									for (int xPix = upto; xPix < GUI.screenWidth; xPix++)
+									{
+										int crntTile = ((windowOffset >> 3) << 5) + (windowX >> 3);
+										
+										int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT6) << 4) + crntTile];
+										//System.out.println(Integer.toHexString(tileNum));
+					
+										int tileIndex;
+										if ((HRAM[0x1F40] & BIT4) != 0)
+											tileIndex = tileNum << 4; // tileNum * 16
+										else
+											tileIndex = 0x800 + ((((byte)(tileNum)) + 128) << 4);
+										
+										//System.out.println(Integer.toHexString(tileIndex));
+										
+										int bitPos = ((windowOffset & 7) << 4) + (windowX & 7); // 16*y + x
+										int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+
+										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
+													   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
+									
+										
+										//System.out.printf("writing window (%d, %d) to screen (%d, %d)\n", windowX, windowOffset, xPix, scanline);
+										
+										
+										screen[mult + xPix] = myColor[colorVal];
+										
+										windowX++;
+									}
+									
+									windowOffset++;
 								}
 							}
 							// Done with BG/Window
