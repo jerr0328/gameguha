@@ -2,7 +2,7 @@ public final class CPU extends Thread
 {
 	//boolean[] visited = new boolean[0x10000];
 	
-	private static final boolean throttle = true;
+	private static final boolean throttle = false;
 	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
@@ -4085,58 +4085,63 @@ public final class CPU extends Thread
 					default: throw new AssertionError("Unsupported opcode");
 				}
 				
-				// HANDLE INTERRUPTS HERE
-						
+				// HANDLE INTERRUPTS HERE		
 				if (IME)
 				{
-					// TODO: Replace this with a hardcoded switch statement
-					if ((HRAM[0x1FFF] & BIT0) != 0 && (HRAM[0x1F0F] & BIT0) != 0)
+					switch (HRAM[0x1FFF] & HRAM[0x1F0F])
 					{
-						//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
-						HRAM[0x1F0F] &= ~BIT0;
-						IME = false;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
-						PC = 0x0040;
-					}
-					else if ((HRAM[0x1FFF] & BIT1) != 0 && (HRAM[0x1F0F] & BIT1) != 0)
-					{
-						//System.out.println("Launching LCDC interrupt");
-						HRAM[0x1F0F] &= ~BIT1;
-						IME = false;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
-						PC = 0x0048;
-					}
-					else if ((HRAM[0x1FFF] & BIT2) != 0 && (HRAM[0x1F0F] & BIT2) != 0)
-					{
-						//System.out.println("Launching TIMER interrupt");
-						HRAM[0x1F0F] &= ~BIT2;
-						IME = false;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
-						PC = 0x0050;
-					}
-					else if ((HRAM[0x1FFF] & BIT3) != 0 && (HRAM[0x1F0F] & BIT3) != 0)
-					{
-						//System.out.println("Launching SERIAL interrupt");
-						HRAM[0x1F0F] &= ~BIT3;
-						IME = false;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
-						PC = 0x0058;
-					}
-					else if ((HRAM[0x1FFF] & BIT4) != 0 && (HRAM[0x1F0F] & BIT4) != 0)
-					{
-						//System.out.println("Launching JOYPAD interrupt");
-						HRAM[0x1F0F] &= ~BIT4;
-						IME = false;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
-						PC = 0x0060;
+						case 1: case 3: case 5: case 7: case 9: case 11: case 13: case 15:
+						case 17: case 19: case 21: case 23: case 25: case 27: case 29: case 31:
+							//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
+							HRAM[0x1F0F] &= ~BIT0;
+							IME = false;
+							writeMem(mem, --SP, PC >> 8);
+							writeMem(mem, --SP, PC & 0x00FF);
+							PC = 0x0040;
+						break;
+						
+						case 2: case 6: case 10: case 14: case 18: case 22: case 26: case 30:
+							//System.out.println("Launching LCDC interrupt");
+							HRAM[0x1F0F] &= ~BIT1;
+							IME = false;
+							writeMem(mem, --SP, PC >> 8);
+							writeMem(mem, --SP, PC & 0x00FF);
+							PC = 0x0048;
+						break;
+						
+						case 4: case 12: case 20: case 28:
+							//System.out.println("Launching TIMER interrupt");
+							HRAM[0x1F0F] &= ~BIT2;
+							IME = false;
+							writeMem(mem, --SP, PC >> 8);
+							writeMem(mem, --SP, PC & 0x00FF);
+							PC = 0x0050;
+						break;
+						
+						case 8: case 24:
+							//System.out.println("Launching SERIAL interrupt");
+							HRAM[0x1F0F] &= ~BIT3;
+							IME = false;
+							writeMem(mem, --SP, PC >> 8);
+							writeMem(mem, --SP, PC & 0x00FF);
+							PC = 0x0058;
+						break;
+						
+						case 16:
+							//System.out.println("Launching JOYPAD interrupt");
+							HRAM[0x1F0F] &= ~BIT4;
+							IME = false;
+							writeMem(mem, --SP, PC >> 8);
+							writeMem(mem, --SP, PC & 0x00FF);
+							PC = 0x0060;
+						break;
+						
+						case 0:
+						break;
+						
+						default: throw new AssertionError("Flag register has extra bits set");
 					}
 				}
-				
 				// STOP HANDLING INTERRUPTS
 				
 				//int cyclesUntilScan = ;
@@ -4255,32 +4260,35 @@ public final class CPU extends Thread
 										int tileIndex;
 										
 										if ((HRAM[0x1F40] & BIT4) != 0)
-										{
-										//System.out.println("**1**");
 											tileIndex = tileNum << 4; // tileNum * 16
+										else
+											tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
+										
+										int bitPos = (y << 4) + x; // 16*y + x
+										int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
+										
+										if (xPix+8 < upto)
+										{
+											while (x < 8)
+											{
+												screen[mult + xPix] = myColor[((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) | ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0)];
+												xPix++;
+												x++;
+												bitSet >>= 1;
+											}
 										}
 										else
 										{
-										//System.out.println("**2**");	
-											tileIndex = 0x1000 + (((byte)tileNum) << 4); // $1000 + signed tileNum * 16
-										}
-										
-										while (x < 8)
-										{
-											int bitPos = (y << 4) + x; // 16*y + x
-											int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
-										//System.out.println("Grabbing bit " + (bitPos%8));
-											int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-										//System.out.println("** " + tileNum);
-										//System.out.println(Integer.toHexString(tileIndex) + " out of " + Integer.toHexString(VRAM.length));
-											int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
-											
-											screen[mult + xPix] = myColor[colorVal];
-											xPix++;
-											if (xPix >= upto)
-												break outer;
-											x++;
+											while (x < 8)
+											{
+												screen[mult + xPix] = myColor[((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) | ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0)];
+												xPix++;
+												if (xPix >= upto)
+													break outer;
+												x++;
+												bitSet >>= 1;
+											}
 										}
 										
 										x = 0;
@@ -4336,36 +4344,32 @@ public final class CPU extends Thread
 								// Now handle Window (slow, update later)
 								if (upto < GUI.screenWidth)
 								{
-									int windowX = 0;									
-									for (int xPix = upto; xPix < GUI.screenWidth; xPix++)
+									int windowX = 0;
+									int xPix = upto;
+									int crntTile = ((windowOffset >> 3) << 5) + (windowX >> 3);
+									
+									while(xPix < GUI.screenWidth)
 									{
-										int crntTile = ((windowOffset >> 3) << 5) + (windowX >> 3);
-										
 										int tileNum = VRAM[0x1800 + ((HRAM[0x1F40] & BIT6) << 4) + crntTile];
-										//System.out.println(Integer.toHexString(tileNum));
-					
 										int tileIndex;
 										if ((HRAM[0x1F40] & BIT4) != 0)
 											tileIndex = tileNum << 4; // tileNum * 16
 										else
 											tileIndex = 0x800 + ((((byte)(tileNum)) + 128) << 4);
 										
-										//System.out.println(Integer.toHexString(tileIndex));
-										
 										int bitPos = ((windowOffset & 7) << 4) + (windowX & 7); // 16*y + x
-										int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
+										int byteIndex = tileIndex + (bitPos >> 3); // tileIndex + (bitPos/8)
 										int bitSet = 1 << (7-(bitPos & 0x7)); // 1 << (7-(bitPos%8))
-
-										int colorVal = ((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) |  // LSB
-													   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
-									
 										
-										//System.out.printf("writing window (%d, %d) to screen (%d, %d)\n", windowX, windowOffset, xPix, scanline);
+										do
+										{
+											screen[mult + xPix] = myColor[((VRAM[byteIndex] & bitSet) != 0 ? BIT0 : 0) | ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0)];
+											xPix++;
+											windowX++;
+											bitSet >>= 1;
+										} while((windowX & 7) != 0 && xPix < GUI.screenWidth);
 										
-										
-										screen[mult + xPix] = myColor[colorVal];
-										
-										windowX++;
+										crntTile++;
 									}
 									
 									windowOffset++;
