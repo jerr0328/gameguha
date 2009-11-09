@@ -4333,11 +4333,6 @@ public final class CPU extends Thread
 								{
 									int xPix = upto;
 									int crntTile = (windowOffset >> 3) << 5;
-									if (xPix < 0)
-									{
-										xPix += 8;
-										crntTile++;
-									}
 									int offset = (windowOffset & 7) << 1;
 									
 									for(;;)
@@ -4357,28 +4352,41 @@ public final class CPU extends Thread
 										
 										if (xPix+8 < GUI.screenWidth)
 										{
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
-											bitSet >>= 1;
-											
-											screen[mult + xPix++] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+											if (xPix < 0)
+											{
+												for (int i = 0; i < 8; i++)
+												{
+													if (xPix >= 0)
+														screen[mult + xPix] = myColor[((byte0 & bitSet) != 0 ? BIT0 : 0) | ((byte1 & bitSet) != 0 ? BIT1 : 0)];
+													xPix++;
+													bitSet >>= 1;
+												}
+											}
+											else
+											{
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 7) | ((byte1 & bitSet) >> 6)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 6) | ((byte1 & bitSet) >> 5)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 5) | ((byte1 & bitSet) >> 4)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 4) | ((byte1 & bitSet) >> 3)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 3) | ((byte1 & bitSet) >> 2)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 2) | ((byte1 & bitSet) >> 1)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[((byte0 & bitSet) >> 1) | (byte1 & bitSet)];
+												bitSet >>= 1;
+												
+												screen[mult + xPix++] = myColor[(byte0 & bitSet) | ((byte1 & bitSet) << 1)];
+											}
 										}
 										else
 										{
