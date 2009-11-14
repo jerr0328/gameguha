@@ -3386,7 +3386,7 @@ public final class CPU extends Thread
 							case 0xBE: // RES 7,(HL)
 								numCycles+=4;
 								index = (HREG << 8) | LREG; 
-								writeMem(mem, index, readMem(mem, index) & ~BIT0);
+								writeMem(mem, index, readMem(mem, index) & ~BIT7);
 							break;
 							
 							case 0xBF: // RES 7,A
