@@ -2156,8 +2156,8 @@ public final class CPU extends Thread
 						if ((FREG & ZERO) == 0)
 						{
 							numCycles+=6;
-							writeMem(mem, --SP, (PC+2) >> 8);
-							writeMem(mem, --SP, (PC+2) & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) & 0x00FF);
 							PC = readMem(mem, PC) | (readMem(mem, PC+1) << 8);
 						}
 						else
@@ -2169,8 +2169,8 @@ public final class CPU extends Thread
 					
 					case 0xC5: //PUSH BC
 						numCycles+=4;
-						writeMem(mem, --SP, BREG);
-						writeMem(mem, --SP, CREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, BREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, CREG);
 					break;
 					
 					case 0xC6: // ADD A,n
@@ -2182,8 +2182,8 @@ public final class CPU extends Thread
 					
 					case 0xC7: // RST 00H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0000;
 					break;
 					
@@ -3741,8 +3741,8 @@ public final class CPU extends Thread
 						if ((FREG & ZERO) != 0)
 						{
 							numCycles+=6;
-							writeMem(mem, --SP, (PC+2) >> 8);
-							writeMem(mem, --SP, (PC+2) & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) & 0x00FF);
 							PC = readMem(mem, PC) | (readMem(mem, PC+1) << 8);
 						}
 						else
@@ -3754,8 +3754,8 @@ public final class CPU extends Thread
 					
 					case 0xCD: // CALL nn
 						numCycles+=6;
-						writeMem(mem, --SP, (PC+2) >> 8);
-						writeMem(mem, --SP, (PC+2) & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) & 0x00FF);
 						PC = readMem(mem, PC) | (readMem(mem, PC+1) << 8);
 					break;
 					
@@ -3768,8 +3768,8 @@ public final class CPU extends Thread
 					
 					case 0xCF: // RST 08H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0008;
 					break;
 					
@@ -3806,8 +3806,8 @@ public final class CPU extends Thread
 						if ((FREG & CARRY) == 0)
 						{
 							numCycles+=6;
-							writeMem(mem, --SP, (PC+2) >> 8);
-							writeMem(mem, --SP, (PC+2) & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) & 0x00FF);
 							PC = readMem(mem, PC) | (readMem(mem, PC+1) << 8);
 						}
 						else
@@ -3819,8 +3819,8 @@ public final class CPU extends Thread
 						
 					case 0xD5: //PUSH DE
 						numCycles+=4;
-						writeMem(mem, --SP, DREG);
-						writeMem(mem, --SP, EREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, DREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, EREG);
 					break;
 					
 					case 0xD6: // SUB A,n
@@ -3832,8 +3832,8 @@ public final class CPU extends Thread
 					
 					case 0xD7: // RST 10H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0010;
 					break;
 					
@@ -3870,8 +3870,8 @@ public final class CPU extends Thread
 						if ((FREG & CARRY) != 0)
 						{
 							numCycles+=6;
-							writeMem(mem, --SP, (PC+2) >> 8);
-							writeMem(mem, --SP, (PC+2) & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, (PC+2) & 0x00FF);
 							PC = readMem(mem, PC) | (readMem(mem, PC+1) << 8);
 						}
 						else
@@ -3890,8 +3890,8 @@ public final class CPU extends Thread
 					
 					case 0xDF: // RST 18H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0018;
 					break;
 					
@@ -3913,8 +3913,8 @@ public final class CPU extends Thread
 					
 					case 0xE5: // PUSH HL
 						numCycles+=4;
-						writeMem(mem, --SP, HREG);
-						writeMem(mem, --SP, LREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, HREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, LREG);
 					break;
 					
 					case 0xE6: // AND n
@@ -3925,8 +3925,8 @@ public final class CPU extends Thread
 					
 					case 0xE7: // RST 20H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0020;
 					break;
 					
@@ -3960,8 +3960,8 @@ public final class CPU extends Thread
 					
 					case 0xEF: // RST 28H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0028;
 					break;
 					
@@ -3989,8 +3989,8 @@ public final class CPU extends Thread
 					
 					case 0xF5: // PUSH AF
 						numCycles+=4;
-						writeMem(mem, --SP, AREG);
-						writeMem(mem, --SP, FREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, AREG);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, FREG);
 					break;
 					
 					case 0xF6: // OR n
@@ -4001,8 +4001,8 @@ public final class CPU extends Thread
 					
 					case 0xF7: // RST 30H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0030;
 					break;
 					
@@ -4043,8 +4043,8 @@ public final class CPU extends Thread
 					
 					case 0xFF: // RST 38H
 						numCycles += 4;
-						writeMem(mem, --SP, PC >> 8);
-						writeMem(mem, --SP, PC & 0x00FF);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+						writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 						PC = 0x0038;
 					break;
 					
@@ -4061,8 +4061,8 @@ public final class CPU extends Thread
 							//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
 							HRAM[0x1F0F] &= ~BIT0;
 							IME = false;
-							writeMem(mem, --SP, PC >> 8);
-							writeMem(mem, --SP, PC & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0040;
 						break;
 						
@@ -4070,8 +4070,8 @@ public final class CPU extends Thread
 							//System.out.println("Launching LCDC interrupt");
 							HRAM[0x1F0F] &= ~BIT1;
 							IME = false;
-							writeMem(mem, --SP, PC >> 8);
-							writeMem(mem, --SP, PC & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0048;
 						break;
 						
@@ -4079,8 +4079,8 @@ public final class CPU extends Thread
 							//System.out.println("Launching TIMER interrupt");
 							HRAM[0x1F0F] &= ~BIT2;
 							IME = false;
-							writeMem(mem, --SP, PC >> 8);
-							writeMem(mem, --SP, PC & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0050;
 						break;
 						
@@ -4088,8 +4088,8 @@ public final class CPU extends Thread
 							//System.out.println("Launching SERIAL interrupt");
 							HRAM[0x1F0F] &= ~BIT3;
 							IME = false;
-							writeMem(mem, --SP, PC >> 8);
-							writeMem(mem, --SP, PC & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0058;
 						break;
 						
@@ -4097,8 +4097,8 @@ public final class CPU extends Thread
 							//System.out.println("Launching JOYPAD interrupt");
 							HRAM[0x1F0F] &= ~BIT4;
 							IME = false;
-							writeMem(mem, --SP, PC >> 8);
-							writeMem(mem, --SP, PC & 0x00FF);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0060;
 						break;
 						
