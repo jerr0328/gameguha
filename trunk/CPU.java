@@ -4164,8 +4164,7 @@ public final class CPU extends Thread
 							{
 								HRAM[0x1F01] = 0xFF;
 								HRAM[0x1F02] &= ~BIT7;
-								if (IME)
-									HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT3);
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT3);
 							}
 						}
 						
@@ -4176,7 +4175,7 @@ public final class CPU extends Thread
 						if (scanline < GUI.screenHeight)
 						{
 							HRAM[0x1F41] &= ~0x03;
-							if (IME && (HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
+							if ((HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 							
 							// Handle BG/Window
@@ -4424,6 +4423,7 @@ public final class CPU extends Thread
 						else if (scanline == GUI.screenHeight)
 						{
 							// Draw sprites now
+							//int[] oldscreen = screen.clone();
 							Sprite[] sprites = new Sprite[40];
 							
 							if ((HRAM[0x1F40] & BIT2) != 0) // 8*16
@@ -4503,11 +4503,8 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0)
-											{
-												//if ((flags & BIT7) != 0 || screen[scanline*GUI.screenWidth + xPix] == colorBG[0])
-													screen[mult + xPix] = myColor[colorVal];
-											}
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == colorBG[0]))
+												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}
 										
@@ -4593,11 +4590,8 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0)
-											{
-												//if ((flags & BIT7) != 0 || screen[scanline*GUI.screenWidth + xPix] == colorBG[0])
-													screen[mult + xPix] = myColor[colorVal];
-											}
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == colorBG[0]))
+												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}
 										
@@ -4610,10 +4604,9 @@ public final class CPU extends Thread
 							
 							Arrays.fill(spritesOff, false);
 							
-							if (IME)
-								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT0); // Request VBLANK
+							HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT0); // Request VBLANK
 							HRAM[0x1F41] |= BIT0;
-							if (IME && (HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
+							if ((HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 							
 							//nextVBlank += CYCLES_PER_LINE*154;
@@ -4623,7 +4616,7 @@ public final class CPU extends Thread
 						{
 							HRAM[0x1F41] |= BIT2;
 							//System.out.printf("%d scanline, LYC interrupt\n", scanline);
-							if (IME && (HRAM[0x1F41] & BIT6) != 0)
+							if ((HRAM[0x1F41] & BIT6) != 0)
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 						}
 						else
@@ -4647,7 +4640,7 @@ public final class CPU extends Thread
 						{
 							int div = (((HRAM[0x1F07]-1) & 0x03) + 1) << 1;
 							
-							if (IME && HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
+							if (HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT2);
 							//System.out.println(HRAM[0x1F05]);
 						}
@@ -4669,8 +4662,7 @@ public final class CPU extends Thread
 			
 			if (joypadFlag)
 			{
-				if (IME)
-					HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT4);
+				HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT4);
 				joypadFlag = false;
 			}
 			
