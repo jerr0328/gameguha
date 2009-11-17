@@ -18,8 +18,9 @@ public final class GUI implements KeyListener//, FrameListener
 	private static GraphicsEnvironment ge;
 	private static GraphicsDevice gd;
 	private static Frame frame;
-	private static Frame keyframe;
+	private static MenuBar mb;
 	private static Insets ins;
+	private static Point prevCoord;
 	private static ScreenRenderer render;
 	private static boolean fullScreen = false;
 	private static boolean buttonLEFT = false;
@@ -50,42 +51,24 @@ public final class GUI implements KeyListener//, FrameListener
 		gd = ge.getDefaultScreenDevice();
 		System.out.println(gd.isFullScreenSupported());
 	
-	    	frame = new Frame("GameGuha");
-	    	MenuBar mb = new MenuBar();
-	    	mb.add(new FileMenu(frame, this));
-	    	mb.add(new ViewMenu());
-	    	mb.add(new SoundMenu());
+		mb = new MenuBar();
+		mb.add(new FileMenu(frame, this));
+		mb.add(new ViewMenu());
+		mb.add(new SoundMenu());
+	    	
+		zoom = 1;
+		delayZoom = 1;
 		
-	    	frame.setMenuBar(mb);
-    	
-		frame.setResizable(false);
-		frame.setVisible(true); 
+		sem = new Semaphore(0);
+		render = new ScreenRenderer(sem);
 		
-		frame.addKeyListener(this);
+		toggleFullScreen(fullScreen);
 		
-	
-		ins = frame.getInsets();
-		System.out.printf("top:%d bot:%d left:%d right:%d\n", ins.top, ins.bottom, ins.left, ins.right);
-		frame.setSize(screenWidth + ins.left + ins.right, screenHeight + ins.top + ins.bottom); 
-			
-		frame.addWindowListener(new WindowAdapter()
-		{
-			public void windowClosing(WindowEvent we)
-			{
-        		System.exit(0);
-     		}
-		});
-		
-		g = frame.getGraphics();
-		
-		screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
-		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
+		//screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
+		//imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
 
 		int frames = 0;
 		long startT = System.nanoTime();
-		
-		zoom = 1;
-		delayZoom = 1;
 
 		/*while(true)
 		{
@@ -100,11 +83,46 @@ public final class GUI implements KeyListener//, FrameListener
 			int[] arr = {0};
 			drawFrame(arr);
 		}*/
-
-		sem = new Semaphore(0);
 		
-		render = new ScreenRenderer(sem);
 		render.start();
+	}
+	
+	public void newGUIFrame(boolean undecorated)
+	{
+		if (frame != null)
+		{
+			if (!fullScreen)
+				prevCoord = frame.getLocation();
+			frame.dispose();
+		}
+		
+		frame = new Frame("GameGuha");
+		
+		if (undecorated)
+			frame.setUndecorated(true);
+		else
+		{
+			frame.setMenuBar(mb);
+			if (prevCoord != null)
+				frame.setLocation(prevCoord);
+		}
+		
+		frame.setResizable(false);
+		frame.setVisible(true);
+		
+		frame.addKeyListener(this);
+	
+		ins = frame.getInsets();
+		System.out.printf("top:%d bot:%d left:%d right:%d\n", ins.top, ins.bottom, ins.left, ins.right);
+		changeZoom();
+		
+		frame.addWindowListener(new WindowAdapter()
+		{
+			public void windowClosing(WindowEvent we)
+			{
+        		System.exit(0);
+     		}
+		});
 	}
 	
 	public void newFrame(int[] gbScreen)
@@ -112,7 +130,7 @@ public final class GUI implements KeyListener//, FrameListener
 		if (zoom != delayZoom)
 			changeZoom();
 			
-		render.setReferences(imgBuffer, gbScreen, frame, g, zoom, fullScreen, screen);
+		render.setGBVideo(gbScreen);
 		sem.drainPermits();
 		sem.release();
 		//render.requestFrame();
@@ -135,59 +153,72 @@ public final class GUI implements KeyListener//, FrameListener
 		
 		screen = new BufferedImage(screenWidth*zoom, screenHeight*zoom, BufferedImage.TYPE_INT_RGB);
 		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
+		
+		render.setReferences(imgBuffer, frame, zoom, fullScreen, screen);
 	}
 	
 	public void toggleFullScreen(boolean set)
 	{
+		newGUIFrame(set);
 		fullScreen = set;
 		if (fullScreen)
+		{
+			int[] pixels = new int[16 * 16];
+			Image image = Toolkit.getDefaultToolkit().createImage(new MemoryImageSource(16, 16, pixels, 0, 16));
+			Cursor transparentCursor = Toolkit.getDefaultToolkit().createCustomCursor(image, new Point(0, 0), "invisibleCursor");
+			frame.setCursor(transparentCursor);
+
 			gd.setFullScreenWindow(frame);
+		}
 		else
 			gd.setFullScreenWindow(null);
+		
+		g = frame.getGraphics();
+		render.setReferences(imgBuffer, frame, zoom, fullScreen, screen);
 	}
 	
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
-		if (key.getKeyCode() == KeyEvent.VK_F)
+		if (key.isAltDown() && key.getKeyCode() == KeyEvent.VK_ENTER)
 			toggleFullScreen(!fullScreen);
 			
-	   if(key.getKeyCode() == keyLEFT)
+	   else if(key.getKeyCode() == keyLEFT)
 		{
 		   buttonLEFT = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keyRIGHT)
+		else if(key.getKeyCode() == keyRIGHT)
 		{	
 		   buttonRIGHT = true;
 			cpu.joypadInt();
 		}
-      if(key.getKeyCode() == keyUP)
+      else if(key.getKeyCode() == keyUP)
 		{
 		   buttonUP = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keyDOWN)
+		else if(key.getKeyCode() == keyDOWN)
 		{
 		   buttonDOWN = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keyA)
+		else if(key.getKeyCode() == keyA)
 		{
 		   buttonA = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keyB)
+		else if(key.getKeyCode() == keyB)
 		{
 		   buttonB = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keySTART)
+		else if(key.getKeyCode() == keySTART)
 		{
 		   buttonSTART = true;
 			cpu.joypadInt();
 		}
-		if(key.getKeyCode() == keySELECT)
+		else if(key.getKeyCode() == keySELECT)
 		{
 		   buttonSELECT = true;
 			cpu.joypadInt();
@@ -199,25 +230,25 @@ public final class GUI implements KeyListener//, FrameListener
 	   if(key.getKeyCode() == keyLEFT)
 		   buttonLEFT = false;
 			
-		if(key.getKeyCode() == keyRIGHT)
+		else if(key.getKeyCode() == keyRIGHT)
 		   buttonRIGHT = false;
 			
-      if(key.getKeyCode() == keyUP)
+      else if(key.getKeyCode() == keyUP)
 		   buttonUP = false;
 		
-		if(key.getKeyCode() == keyDOWN)
+		else if(key.getKeyCode() == keyDOWN)
 		   buttonDOWN = false;
 		
-		if(key.getKeyCode() == keyA)
+		else if(key.getKeyCode() == keyA)
 		   buttonA = false;
 		
-		if(key.getKeyCode() == keyB)
+		else if(key.getKeyCode() == keyB)
 		   buttonB = false;
 			
-		if(key.getKeyCode() == keySTART)
+		else if(key.getKeyCode() == keySTART)
 		   buttonSTART = false;
 		
-		if(key.getKeyCode() == keySELECT)
+		else if(key.getKeyCode() == keySELECT)
 		   buttonSELECT = false;
 		
 	}
@@ -257,8 +288,7 @@ public final class GUI implements KeyListener//, FrameListener
 	public boolean getSelect()
 	{
 	   return buttonSELECT;
-	}
-	
+	}	
 	
 	//End of the key registering stuff. 	
 	private class FileMenu extends Menu implements ActionListener {
@@ -280,8 +310,8 @@ public final class GUI implements KeyListener//, FrameListener
 			mi.addActionListener(this);
 		    add(mi = new MenuItem("Exit")); 
 		    mi.addActionListener(this); 
-	
 		}
+		
 		public void actionPerformed(ActionEvent e) { 
 			String item = e.getActionCommand(); 
 			if (item.equals("Open")){
@@ -646,7 +676,6 @@ public final class GUI implements KeyListener//, FrameListener
 			   keySELECT = e.getKeyCode();
 				selectT.setText(KeyEvent.getKeyText(keySELECT));
 			}
-
 		}
 	}
 }

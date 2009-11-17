@@ -15,6 +15,14 @@ public final class ScreenRenderer extends Thread
 	private static int zoom;
 	private static boolean fullScreen;
 	private static BufferedImage screen;
+	private static Insets ins;
+	private static int width;
+	private static int height;
+	private static int drawWidth;
+	private static int drawHeight;	
+	private static int xOffset;
+	private static int yOffset;
+	private static int newFull;
 	//boolean newFrame;
 
 	public ScreenRenderer(Semaphore sem)
@@ -22,15 +30,34 @@ public final class ScreenRenderer extends Thread
 		this.sem = sem;
 	}
 	
-	public void setReferences(int[] imgBuffer, int[] gbScreen, Frame frame, Graphics g, int zoom, boolean fullScreen, BufferedImage screen)
+	public void setGBVideo(int[] gbScreen)
+	{
+		this.gbScreen = gbScreen;
+	}
+	
+	public void setReferences(int[] imgBuffer, Frame frame, int zoom, boolean fullScreen, BufferedImage screen)
 	{
 		this.imgBuffer = imgBuffer;
-		this.gbScreen = gbScreen;
 		this.frame = frame;
-		this.g = g;
 		this.zoom = zoom;
 		this.fullScreen = fullScreen;
 		this.screen = screen;
+		
+		this.g = frame.getGraphics();
+		this.ins = frame.getInsets();
+		
+		if (fullScreen)
+		{
+			width = frame.getWidth() - ins.left - ins.right;
+			height = frame.getHeight() - ins.top - ins.bottom;
+			
+			drawWidth = Math.min(width, (int)((160.0/144.0)*height + 0.5));
+			drawHeight = Math.min(height, (int)((144.0/160.0)*width + 0.5));	
+			xOffset = ins.left + ((width-drawWidth) >> 1);
+			yOffset = ins.top + ((height-drawHeight) >> 1);
+			
+			newFull = 5;
+		}
 	}
 	
 	public void run()
@@ -172,10 +199,19 @@ public final class ScreenRenderer extends Thread
 			}
 			
 			//((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			Insets ins = frame.getInsets();
+			//Insets ins = frame.getInsets();
 			
 			if (fullScreen)
-				g.drawImage(screen, ins.left, ins.top, frame.getWidth() - ins.left - ins.right, frame.getHeight() - ins.top - ins.bottom, null);
+			{
+				if (newFull > 0)
+				{
+					g.setColor(Color.BLACK);
+					g.fillRect(0, 0, width, height);
+					newFull--;
+				}
+				else
+					g.drawImage(screen, xOffset, yOffset, drawWidth, drawHeight, null);
+			}
 			else
 				g.drawImage(screen, ins.left, ins.top, null);
 			
