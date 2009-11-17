@@ -24,31 +24,6 @@ public final class CPU extends Thread
 	private static final long nsPerFrame = (long)(1000000000/59.73);
 	
 	private static final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
-	
-	// P1; // $FF00
-	// SB; // $FF01
-	// SC; // $FF02
-	// DIV; // $FF04
-	// TIMA; // $FF05
-	// TMA; // $FF06
-	// TAC; // $FF07
-	// IF; // $FF0F
-	// NR21; // $FF16 bits 6-7
-	// NR22; // $FF17 entire byte
-	// NR24; // $FF19 bit 6
-	// LCDC = 0x91; // $FF40
-	// STAT; // $FF41
-	// SCY; // $FF42
-	// SCX; // $FF43
-	// LY; // $FF44
-	// LYC; // $FF45
-	// DMA; // $FF46
-	// BGP = 0xFC; // $FF47
-	// OBP0 = 0xFF; // $FF48
-	// OBP1 = 0xFF; // $FF49
-	// WY; // $FF4A
-	// WX; // $FF4B
-	// IE; // $FFFF
 
 	private static ROM rom;
 	private static GUI gui;
@@ -578,6 +553,39 @@ public final class CPU extends Thread
 		final int[] HRAM = mem[7];
 		
 		genFlagTable(FLAG_ADD, FLAG_SUB, FLAG_INC, FLAG_DEC);
+		
+		// Set default values on boot
+		writeMem(mem, 0xFF05, 0x00); // TIMA
+		writeMem(mem, 0xFF06, 0x00); // TMA
+		writeMem(mem, 0xFF07, 0x00); // TAC
+		writeMem(mem, 0xFF10, 0x80); // NR10
+		writeMem(mem, 0xFF11, 0xBF); // NR11
+		writeMem(mem, 0xFF12, 0xF3); // NR12
+		writeMem(mem, 0xFF14, 0xBF); // NR14
+		writeMem(mem, 0xFF16, 0x3F); // NR21
+		writeMem(mem, 0xFF17, 0x00); // NR22
+		writeMem(mem, 0xFF19, 0xBF); // NR24
+		writeMem(mem, 0xFF1A, 0x7F); // NR30
+		writeMem(mem, 0xFF1B, 0xFF); // NR31
+		writeMem(mem, 0xFF1C, 0x9F); // NR32
+		writeMem(mem, 0xFF1E, 0xBF); // NR33
+		writeMem(mem, 0xFF20, 0xFF); // NR41
+		writeMem(mem, 0xFF21, 0x00); // NR42
+		writeMem(mem, 0xFF22, 0x00); // NR43
+		writeMem(mem, 0xFF23, 0xBF); // NR30
+		writeMem(mem, 0xFF24, 0x77); // NR50
+		writeMem(mem, 0xFF25, 0xF3); // NR51
+		writeMem(mem, 0xFF26, 0xF1); // NR52
+		writeMem(mem, 0xFF40, 0x91); // LCDC
+		writeMem(mem, 0xFF42, 0x00); // SCY
+		writeMem(mem, 0xFF43, 0x00); // SCX
+		writeMem(mem, 0xFF45, 0x00); // LYC
+		writeMem(mem, 0xFF47, 0xFC); // BGP
+		writeMem(mem, 0xFF48, 0xFF); // OBP0
+		writeMem(mem, 0xFF49, 0xFF); // OBP1
+		writeMem(mem, 0xFF4A, 0x00); // WY
+		writeMem(mem, 0xFF4B, 0x00); // WX
+		writeMem(mem, 0xFFFF, 0x00); // IE
 		
 		/*for (int i = 0; i < 16; i++)
 		{
