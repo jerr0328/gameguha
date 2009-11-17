@@ -56,6 +56,7 @@ public final class CPU extends Thread
 	private static int mbc;
 	private static int mbcMode = 0;
 	private static int mbcSig = 0;
+	private static int mbcLower = 1;
 	private static boolean pleaseWait;
 	private static boolean halt;
 	private static int newSerialInt;
@@ -176,7 +177,7 @@ public final class CPU extends Thread
 			case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E: case 0x0F:
 			case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
 			case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
-				return val;
+				return mem[0][index & 0x1FFF];
 			
 			case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
 			case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
@@ -184,31 +185,30 @@ public final class CPU extends Thread
 			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
 				switch(mbc)
 				{
-					case 0:
-						return val;
+					case 0: break;
 					
 					case 1:
-						int bank = (val & 0x1F);
-						if (bank == 0)
-							bank = 1;
-						bank |= mbcSig;
+						mbcLower = (val & 0x1F);
+						if (mbcLower == 0)
+							mbcLower = 1;
+						int bank = (mbcSig | mbcLower);
 						//System.out.println(Integer.toBinaryString(val) + " out of " + Integer.toBinaryString(rom.numROMBanks));
 						if (bank < rom.numROMBanks)
 						{
 							mem[2] = rom.getROM(bank, 0);
 							mem[3] = rom.getROM(bank, 1);
 						}
-						return val;
+					break;
 					
 					case 2:
-						if ((index & 0x10) == 0)
-							return val;
+						if ((index & 0x0100) == 0)
+							break;
 						bank = (val & 0x0F);
 						if (bank == 0)
 							bank = 1;
 						mem[2] = rom.getROM(bank, 0);
 						mem[3] = rom.getROM(bank, 1);
-						return val;
+					break;
 					
 					case 3:
 						bank = (val & 0x7F);
@@ -216,15 +216,16 @@ public final class CPU extends Thread
 							bank = 1;
 						mem[2] = rom.getROM(bank, 0);
 						mem[3] = rom.getROM(bank, 1);
-						return val;
+					break;
 					
 					case 5:
 						//...
-						return val;
+					break;
 					
 					default:
 						throw new AssertionError("Invalid MBC Type");		
 				}
+				return mem[1][index & 0x1FFF];
 			
 			case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x46: case 0x47:
 			case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F:
@@ -232,30 +233,37 @@ public final class CPU extends Thread
 			case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5E: case 0x5F:
 				switch(mbc)
 				{
-					case 0:
-						return val;
+					case 0: break;
 					
 					case 1:
 						if (mbcMode == 0)
+						{
 							mbcSig = (val & 0x03) << 5;
+							int bank = (mbcSig | mbcLower);
+							if (bank < rom.numROMBanks)
+							{
+								mem[2] = rom.getROM(bank, 0);
+								mem[3] = rom.getROM(bank, 1);
+							}
+						}
 						else
 							mem[5] = rom.getRAM(val & 0x03);
-						return val;
+					break;
 					
-					case 2:
-						return val;
+					case 2: break;
 					
 					case 3:
 						mem[5] = rom.getRAM(val & 0x03);
-						return val;
+					break;
 					
 					case 5:
 						//...
-						return val;
+					break;
 					
 					default:
 						throw new AssertionError("Invalid MBC Type");
 				}
+				return mem[2][index & 0x1FFF];
 			
 			case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67:
 			case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F:
@@ -263,8 +271,7 @@ public final class CPU extends Thread
 			case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F:
 				switch(mbc)
 				{
-					case 0:
-						return val;
+					case 0: break;
 					
 					case 1:
 						mbcMode = val & 0x01;
@@ -272,19 +279,23 @@ public final class CPU extends Thread
 							mem[5] = rom.getRAM(0);
 						else
 							mbcSig = 0;
-						return val;
+							if (mbcLower < rom.numROMBanks)
+							{
+								mem[2] = rom.getROM(mbcLower, 0);
+								mem[3] = rom.getROM(mbcLower, 1);
+							}
+					break;
 					
-					case 2:
-					case 3:
-						return val;
+					case 2: case 3: break;
 					
 					case 5:
 						//...
-						return val;
+					break;
 					
 					default:
 						throw new AssertionError("Invalid MBC Type");
 				}
+				return mem[3][index & 0x1FFF];
 			
 			case 0x80:
 				dirtyTiles1[0] |= 1 << ((index & 0x00F0) >> 4);
@@ -444,6 +455,8 @@ public final class CPU extends Thread
 						return (mem[7][0x1F06] = val);
 					case 0xFF07:
 						return (mem[7][0x1F07] = val);
+					case 0xFF0F:
+						return (mem[7][0x1F0F] = (val & 0x1F));
 					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
 						snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
 						snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
@@ -463,9 +476,6 @@ public final class CPU extends Thread
 							snd.channel2.setSoundLength(-1);
 						
 						return (mem[7][0x1F19] = (val & BIT6));
-					
-					case 0xFF0F:
-						return (mem[7][0x1F0F] = val);
 					case 0xFF40:
 						return (mem[7][0x1F40] = val);
 					case 0xFF41:
@@ -527,7 +537,7 @@ public final class CPU extends Thread
 		int EREG=0xD8;
 		int HREG=0x01;
 		int LREG=0x4D;
-		boolean IME = true;
+		boolean IME = false;
 		
 		final int[][] mem = new int[8][0x2000];
 		
@@ -4154,7 +4164,8 @@ public final class CPU extends Thread
 							{
 								HRAM[0x1F01] = 0xFF;
 								HRAM[0x1F02] &= ~BIT7;
-								HRAM[0x1F0F] |= BIT3;
+								if (IME)
+									HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT3);
 							}
 						}
 						
@@ -4165,8 +4176,8 @@ public final class CPU extends Thread
 						if (scanline < GUI.screenHeight)
 						{
 							HRAM[0x1F41] &= ~0x03;
-							if ((HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
-								HRAM[0x1F0F] |= BIT1;
+							if (IME && (HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 							
 							// Handle BG/Window
 							if ((HRAM[0x1F40] & BIT0) != 0)
@@ -4599,10 +4610,11 @@ public final class CPU extends Thread
 							
 							Arrays.fill(spritesOff, false);
 							
-							HRAM[0x1F0F] |= BIT0; // Request VBLANK
+							if (IME)
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT0); // Request VBLANK
 							HRAM[0x1F41] |= BIT0;
-							if ((HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
-								HRAM[0x1F0F] |= BIT1;
+							if (IME && (HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 							
 							//nextVBlank += CYCLES_PER_LINE*154;
 						}
@@ -4611,8 +4623,8 @@ public final class CPU extends Thread
 						{
 							HRAM[0x1F41] |= BIT2;
 							//System.out.printf("%d scanline, LYC interrupt\n", scanline);
-							if ((HRAM[0x1F41] & BIT6) != 0)
-								HRAM[0x1F0F] |= BIT1;
+							if (IME && (HRAM[0x1F41] & BIT6) != 0)
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
 						}
 						else
 							HRAM[0x1F41] &= ~BIT2;
@@ -4635,8 +4647,8 @@ public final class CPU extends Thread
 						{
 							int div = (((HRAM[0x1F07]-1) & 0x03) + 1) << 1;
 							
-							if (HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
-								HRAM[0x1F0F] |= BIT2;
+							if (IME && HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
+								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT2);
 							//System.out.println(HRAM[0x1F05]);
 						}
 					break;
@@ -4657,7 +4669,8 @@ public final class CPU extends Thread
 			
 			if (joypadFlag)
 			{
-				HRAM[0x1F0F] |= BIT4;
+				if (IME)
+					HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT4);
 				joypadFlag = false;
 			}
 			
