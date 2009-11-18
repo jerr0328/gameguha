@@ -536,6 +536,7 @@ public final class CPU extends Thread
 		final int[] screen = new int[GUI.screenWidth * GUI.screenHeight];
 		final int[] prevTiles = new int[32*32];
 		final boolean[] spritesOff = new boolean[GUI.screenHeight];
+		final int[] bgColor0 = new int[GUI.screenHeight];
 		int windowOffset = 0;
 		int prevTileMap = -1;
 		int prevColors = -1;
@@ -4190,6 +4191,7 @@ public final class CPU extends Thread
 							if ((HRAM[0x1F40] & BIT0) != 0)
 							{
 								myColor = colorBG;
+								bgColor0[scanline] = myColor[0];
 								int mult = scanline*GUI.screenWidth;
 								int upto = GUI.screenWidth;
 								int WY, WX;
@@ -4511,7 +4513,7 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == colorBG[0]))
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == bgColor0[yPix]))
 												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}
@@ -4598,7 +4600,7 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == colorBG[0]))
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == bgColor0[yPix]))
 												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}

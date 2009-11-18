@@ -1,7 +1,5 @@
 import java.awt.*;
 import java.awt.image.*;
-import java.awt.event.*;
-import java.io.*;
 import java.util.concurrent.*;
 
 public final class ScreenRenderer extends Thread
@@ -16,23 +14,21 @@ public final class ScreenRenderer extends Thread
 	private static boolean fullScreen;
 	private static BufferedImage screen;
 	private static Insets ins;
-	private static int width;
-	private static int height;
 	private static int drawWidth;
 	private static int drawHeight;	
 	private static int xOffset;
 	private static int yOffset;
-	private static int newFull;
-	//boolean newFrame;
+	private static int filter;
 
 	public ScreenRenderer(Semaphore sem)
 	{
 		this.sem = sem;
 	}
 	
-	public void setGBVideo(int[] gbScreen)
+	public void setGBVideo(int[] gbScreen, int filter)
 	{
 		this.gbScreen = gbScreen;
+		this.filter = filter;
 	}
 	
 	public void setReferences(int[] imgBuffer, Frame frame, int zoom, boolean fullScreen, BufferedImage screen)
@@ -48,15 +44,13 @@ public final class ScreenRenderer extends Thread
 		
 		if (fullScreen)
 		{
-			width = frame.getWidth() - ins.left - ins.right;
-			height = frame.getHeight() - ins.top - ins.bottom;
+			int width = frame.getWidth() - ins.left - ins.right;
+			int height = frame.getHeight() - ins.top - ins.bottom;
 			
 			drawWidth = Math.min(width, (int)((160.0/144.0)*height + 0.5));
 			drawHeight = Math.min(height, (int)((144.0/160.0)*width + 0.5));	
 			xOffset = ins.left + ((width-drawWidth) >> 1);
 			yOffset = ins.top + ((height-drawHeight) >> 1);
-			
-			newFull = 5;
 		}
 	}
 	
@@ -83,7 +77,12 @@ public final class ScreenRenderer extends Thread
 		
 			int[] buffer = imgBuffer;
 					
-			int xPixel, yPixel, col;
+			int xPixel;
+			int yPixel;
+			int mult;
+			int col;
+			int x;
+			int y1, y2, y3, y4;
 			
 			switch (zoom)
 			{
@@ -92,35 +91,77 @@ public final class ScreenRenderer extends Thread
 				break;
 				
 				case 2:
-					int x;
-					int y1;
-					int y2 = -(GUI.screenWidth*2);
-					for(yPixel = 0; yPixel < 144; yPixel++)
+					switch (filter)
 					{
-						y1 = y2+320;
-						y2 = y1+320;
+						case 0:
+							y2 = -(GUI.screenWidth*2);
+							for(yPixel = 0; yPixel < 144; yPixel++)
+							{
+								mult = yPixel*GUI.screenWidth;
+								y1 = y2+320;
+								y2 = y1+320;
+								
+								for (x = 0; x < 320; x++)
+								{
+									xPixel = x >> 1;
+									
+									col = gbScreen[mult + xPixel];
+				
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+								}
+							}
+						break;
 						
-						for (x = 0; x < 320; x++)
-						{
-							xPixel = x >> 1;
-							
-							col = gbScreen[yPixel*GUI.screenWidth + xPixel];
-		
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							
-							x++;
-							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-						}
+						case 1: // Scale2x (AdvMAME2x)
+						
+							for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
+								for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								{
+									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
+									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
+									int C = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel+1)];
+									int D = gbScreen[yPixel*GUI.screenWidth + (xPixel-1)];
+									int E = gbScreen[yPixel*GUI.screenWidth + xPixel];
+									int F = gbScreen[yPixel*GUI.screenWidth + (xPixel+1)];
+									int G = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel-1)];
+									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
+									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
+									
+									int E0 = (yPixel << 2)*GUI.screenWidth + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (GUI.screenWidth << 1);
+									int E3 = E2 + 1;
+									
+									if (B != H && D != F)
+									{
+										buffer[E0] = (D == B ? D : E);
+										buffer[E1] = (B == F ? F : E);
+										buffer[E2] = (D == H ? D : E);
+										buffer[E3] = (H == F ? F : E);
+									}
+									else
+									{
+										buffer[E0] = E;
+										buffer[E1] = E;
+										buffer[E2] = E;
+										buffer[E3] = E;
+									}
+								}
+						break;
 					}
 				break;
 				
 				case 3:
-					int y3 = -(GUI.screenWidth*3);
+					y3 = -(GUI.screenWidth*3);
 					for(yPixel = 0; yPixel < 144; yPixel++)
 					{
+						mult = yPixel*GUI.screenWidth;
 						y1 = y3+480;
 						y2 = y1+480;
 						y3 = y2+480;
@@ -128,7 +169,7 @@ public final class ScreenRenderer extends Thread
 						
 						for (xPixel = 0; xPixel < 160; xPixel++)
 						{
-							col = gbScreen[yPixel*GUI.screenWidth + xPixel];
+							col = gbScreen[mult + xPixel];
 							
 							buffer[x + y1] = col;
 							buffer[x + y2] = col;
@@ -152,9 +193,10 @@ public final class ScreenRenderer extends Thread
 				break;
 				
 				case 4:
-					int y4 = -(GUI.screenWidth*4);
+					y4 = -(GUI.screenWidth*4);
 					for(yPixel = 0; yPixel < 144; yPixel++)
 					{
+						mult = yPixel*GUI.screenWidth;
 						y1 = y4+640;
 						y2 = y1+640;
 						y3 = y2+640;
@@ -164,7 +206,7 @@ public final class ScreenRenderer extends Thread
 						{
 							xPixel = x >> 2;
 							
-							col = gbScreen[yPixel*GUI.screenWidth + xPixel];
+							col = gbScreen[mult + xPixel];
 		
 							buffer[x + y1] = col;
 							buffer[x + y2] = col;
@@ -202,16 +244,7 @@ public final class ScreenRenderer extends Thread
 			//Insets ins = frame.getInsets();
 			
 			if (fullScreen)
-			{
-				if (newFull > 0)
-				{
-					g.setColor(Color.BLACK);
-					g.fillRect(0, 0, width, height);
-					newFull--;
-				}
-				else
-					g.drawImage(screen, xOffset, yOffset, drawWidth, drawHeight, null);
-			}
+				g.drawImage(screen, xOffset, yOffset, drawWidth, drawHeight, null);
 			else
 				g.drawImage(screen, ins.left, ins.top, null);
 			

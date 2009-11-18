@@ -97,6 +97,7 @@ public final class GUI implements KeyListener//, FrameListener
 		}
 		
 		frame = new Frame("GameGuha");
+		frame.setBackground(Color.BLACK);
 		
 		if (undecorated)
 			frame.setUndecorated(true);
@@ -130,7 +131,7 @@ public final class GUI implements KeyListener//, FrameListener
 		if (zoom != delayZoom)
 			changeZoom();
 			
-		render.setGBVideo(gbScreen);
+		render.setGBVideo(gbScreen, 1);
 		sem.drainPermits();
 		sem.release();
 		//render.requestFrame();
