@@ -19,29 +19,20 @@ public final class ScreenRenderer extends Thread
 	private static int xOffset;
 	private static int yOffset;
 	private static int filter;
+	private static int[] temp;
 
 	public ScreenRenderer(Semaphore sem)
 	{
 		this.sem = sem;
 	}
 	
-	public void setGBVideo(int[] gbScreen, int filter)
+	public void setGBVideo(int[] gbScreen)
 	{
 		this.gbScreen = gbScreen;
-		this.filter = filter;
 	}
 	
-	public void setReferences(int[] imgBuffer, Frame frame, int zoom, boolean fullScreen, BufferedImage screen)
+	public void setReferences(int[] imgBuffer, Frame frame, int zoom, int filter, boolean fullScreen, BufferedImage screen)
 	{
-		this.imgBuffer = imgBuffer;
-		this.frame = frame;
-		this.zoom = zoom;
-		this.fullScreen = fullScreen;
-		this.screen = screen;
-		
-		this.g = frame.getGraphics();
-		this.ins = frame.getInsets();
-		
 		if (fullScreen)
 		{
 			int width = frame.getWidth() - ins.left - ins.right;
@@ -52,10 +43,29 @@ public final class ScreenRenderer extends Thread
 			xOffset = ins.left + ((width-drawWidth) >> 1);
 			yOffset = ins.top + ((height-drawHeight) >> 1);
 		}
+		
+		this.imgBuffer = imgBuffer;
+		this.frame = frame;
+		this.zoom = zoom;
+		this.filter = filter;
+		this.fullScreen = fullScreen;
+		this.screen = screen;
+		
+		this.g = frame.getGraphics();
+		this.ins = frame.getInsets();
 	}
 	
 	public void run()
 	{
+		int[] buffer;
+		int[] myTemp;
+		int xPixel;
+		int yPixel;
+		int mult;
+		int col;
+		int x;
+		int y1, y2, y3, y4;
+		
 		for (;;)
 		{
 			/*while (!newFrame)
@@ -73,17 +83,19 @@ public final class ScreenRenderer extends Thread
 				sem.acquire();
 			}
 			catch (InterruptedException e)
-			{}
-		
-			int[] buffer = imgBuffer;
-					
-			int xPixel;
-			int yPixel;
-			int mult;
-			int col;
-			int x;
-			int y1, y2, y3, y4;
+			{
+				e.printStackTrace();
+			}
 			
+			buffer = imgBuffer;
+			if (zoom == 4 && filter != 0)
+			{
+				if (temp == null)
+					temp = new int[4*GUI.screenWidth*GUI.screenHeight];
+			}
+			else
+				temp = null;
+				
 			switch (zoom)
 			{
 				case 1:
@@ -120,8 +132,8 @@ public final class ScreenRenderer extends Thread
 						
 						case 1: // Scale2x (AdvMAME2x)
 						
-							for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
-								for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+							for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
 								{
 									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
 									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
@@ -133,9 +145,9 @@ public final class ScreenRenderer extends Thread
 									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
 									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
 									
-									int E0 = (yPixel << 2)*GUI.screenWidth + (xPixel << 1);
+									int E0 = yPixel*(4*GUI.screenWidth) + (xPixel << 1);
 									int E1 = E0 + 1;
-									int E2 = E0 + (GUI.screenWidth << 1);
+									int E2 = E0 + (2*GUI.screenWidth);
 									int E3 = E2 + 1;
 									
 									if (B != H && D != F)
@@ -158,82 +170,220 @@ public final class ScreenRenderer extends Thread
 				break;
 				
 				case 3:
-					y3 = -(GUI.screenWidth*3);
-					for(yPixel = 0; yPixel < 144; yPixel++)
+					switch (filter)
 					{
-						mult = yPixel*GUI.screenWidth;
-						y1 = y3+480;
-						y2 = y1+480;
-						y3 = y2+480;
-						x = 0;
+						case 0:
+							y3 = -(GUI.screenWidth*3);
+							for(yPixel = 0; yPixel < 144; yPixel++)
+							{
+								mult = yPixel*GUI.screenWidth;
+								y1 = y3+480;
+								y2 = y1+480;
+								y3 = y2+480;
+								x = 0;
+								
+								for (xPixel = 0; xPixel < 160; xPixel++)
+								{
+									col = gbScreen[mult + xPixel];
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									
+									x++;
+								}
+							}
+						break;
 						
-						for (xPixel = 0; xPixel < 160; xPixel++)
-						{
-							col = gbScreen[mult + xPixel];
+						case 1:
 							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
+							for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
+								{
+									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
+									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
+									int C = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel+1)];
+									int D = gbScreen[yPixel*GUI.screenWidth + (xPixel-1)];
+									int E = gbScreen[yPixel*GUI.screenWidth + xPixel];
+									int F = gbScreen[yPixel*GUI.screenWidth + (xPixel+1)];
+									int G = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel-1)];
+									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
+									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
+									
+									int E0 = yPixel*(9*GUI.screenWidth) + 3*xPixel;
+									int E1 = E0+1;
+									int E2 = E1+1;
+									int E3 = E0 + (3*GUI.screenWidth);
+									int E4 = E3+1;
+									int E5 = E4+1;
+									int E6 = E3 + (3*GUI.screenWidth);
+									int E7 = E6+1;
+									int E8 = E7+1;
+									
+									if (B != H && D != F)
+									{
+										buffer[E0] = D == B ? D : E;
+										buffer[E1] = (D == B && E != C) || (B == F && E != A) ? B : E;
+										buffer[E2] = B == F ? F : E;
+										buffer[E3] = (D == B && E != G) || (D == H && E != A) ? D : E;
+										buffer[E4] = E;
+										buffer[E5] = (B == F && E != I) || (H == F && E != C) ? F : E;
+										buffer[E6] = D == H ? D : E;
+										buffer[E7] = (D == H && E != I) || (H == F && E != G) ? H : E;
+										buffer[E8] = H == F ? F : E;
+									}
+									else
+									{
+										buffer[E0] = E;
+										buffer[E1] = E;
+										buffer[E2] = E;
+										buffer[E3] = E;
+										buffer[E4] = E;
+										buffer[E5] = E;
+										buffer[E6] = E;
+										buffer[E7] = E;
+										buffer[E8] = E;
+									}
+								}
 							
-							x++;
-							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							
-							x++;
-							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							
-							x++;
-						}
+						break;
 					}
 				break;
 				
 				case 4:
-					y4 = -(GUI.screenWidth*4);
-					for(yPixel = 0; yPixel < 144; yPixel++)
+					switch (filter)
 					{
-						mult = yPixel*GUI.screenWidth;
-						y1 = y4+640;
-						y2 = y1+640;
-						y3 = y2+640;
-						y4 = y3+640; 
+						case 0:
+							y4 = -(GUI.screenWidth*4);
+							for(yPixel = 0; yPixel < 144; yPixel++)
+							{
+								mult = yPixel*GUI.screenWidth;
+								y1 = y4+640;
+								y2 = y1+640;
+								y3 = y2+640;
+								y4 = y3+640; 
+								
+								for (x = 0; x < 640; x++)
+								{
+									xPixel = x >> 2;
+									
+									col = gbScreen[mult + xPixel];
+				
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									buffer[x + y4] = col;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									buffer[x + y4] = col;;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									buffer[x + y4] = col;
+									
+									x++;
+									
+									buffer[x + y1] = col;
+									buffer[x + y2] = col;
+									buffer[x + y3] = col;
+									buffer[x + y4] = col;
+								}
+							}
+						break;
 						
-						for (x = 0; x < 640; x++)
-						{
-							xPixel = x >> 2;
+						case 1:
 							
-							col = gbScreen[mult + xPixel];
-		
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							buffer[x + y4] = col;
+							myTemp = temp;
 							
-							x++;
+							for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
+								{
+									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
+									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
+									int C = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel+1)];
+									int D = gbScreen[yPixel*GUI.screenWidth + (xPixel-1)];
+									int E = gbScreen[yPixel*GUI.screenWidth + xPixel];
+									int F = gbScreen[yPixel*GUI.screenWidth + (xPixel+1)];
+									int G = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel-1)];
+									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
+									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
+									
+									int E0 = yPixel*(4*GUI.screenWidth) + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (2*GUI.screenWidth);
+									int E3 = E2 + 1;
+									
+									if (B != H && D != F)
+									{
+										myTemp[E0] = (D == B ? D : E);
+										myTemp[E1] = (B == F ? F : E);
+										myTemp[E2] = (D == H ? D : E);
+										myTemp[E3] = (H == F ? F : E);
+									}
+									else
+									{
+										myTemp[E0] = E;
+										myTemp[E1] = E;
+										myTemp[E2] = E;
+										myTemp[E3] = E;
+									}
+								}
 							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							buffer[x + y4] = col;;
+							for (yPixel = 2; yPixel < (2*GUI.screenHeight)-2; yPixel++)
+								for (xPixel = 2; xPixel < (2*GUI.screenWidth)-2; xPixel++)
+								{
+									//buffer[GUI.screenWidth*4*yPixel + xPixel] = temp[GUI.screenWidth*2*yPixel + xPixel];
+									int A = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel-1)];
+									int B = myTemp[(yPixel-1)*(2*GUI.screenWidth) + xPixel];
+									int C = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel+1)];
+									int D = myTemp[yPixel*(2*GUI.screenWidth) + (xPixel-1)];
+									int E = myTemp[yPixel*(2*GUI.screenWidth) + xPixel];
+									int F = myTemp[yPixel*(2*GUI.screenWidth) + (xPixel+1)];
+									int G = myTemp[(yPixel+1)*(2*GUI.screenWidth) + (xPixel-1)];
+									int H = myTemp[(yPixel+1)*(2*GUI.screenWidth) + xPixel];
+									int I = myTemp[(yPixel+1)*(2*GUI.screenWidth) + (xPixel+1)];
+									
+									int E0 = yPixel*(8*GUI.screenWidth) + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (4*GUI.screenWidth);
+									int E3 = E2 + 1;
+									
+									if (B != H && D != F)
+									{
+										buffer[E0] = (D == B ? D : E);
+										buffer[E1] = (B == F ? F : E);
+										buffer[E2] = (D == H ? D : E);
+										buffer[E3] = (H == F ? F : E);
+									}
+									else
+									{
+										buffer[E0] = E;
+										buffer[E1] = E;
+										buffer[E2] = E;
+										buffer[E3] = E;
+									}
+								}
 							
-							x++;
-							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							buffer[x + y4] = col;
-							
-							x++;
-							
-							buffer[x + y1] = col;
-							buffer[x + y2] = col;
-							buffer[x + y3] = col;
-							buffer[x + y4] = col;
-						}
+						break;
 					}
 				break;
 				

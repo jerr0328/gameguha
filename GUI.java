@@ -22,6 +22,7 @@ public final class GUI implements KeyListener//, FrameListener
 	private static Insets ins;
 	private static Point prevCoord;
 	private static ScreenRenderer render;
+	private static int filter;
 	private static boolean fullScreen = false;
 	private static boolean buttonLEFT = false;
 	private static boolean buttonRIGHT = false;
@@ -131,10 +132,16 @@ public final class GUI implements KeyListener//, FrameListener
 		if (zoom != delayZoom)
 			changeZoom();
 			
-		render.setGBVideo(gbScreen, 1);
+		render.setGBVideo(gbScreen);
 		sem.drainPermits();
 		sem.release();
 		//render.requestFrame();
+	}
+	
+	public void setFilter(int filter)
+	{
+		this.filter = filter;
+		changeZoom();
 	}
 	
 	public void setZoom(int delayZoom)
@@ -155,7 +162,7 @@ public final class GUI implements KeyListener//, FrameListener
 		screen = new BufferedImage(screenWidth*zoom, screenHeight*zoom, BufferedImage.TYPE_INT_RGB);
 		imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
 		
-		render.setReferences(imgBuffer, frame, zoom, fullScreen, screen);
+		render.setReferences(imgBuffer, frame, zoom, filter, fullScreen, screen);
 	}
 	
 	public void toggleFullScreen(boolean set)
@@ -175,7 +182,7 @@ public final class GUI implements KeyListener//, FrameListener
 			gd.setFullScreenWindow(null);
 		
 		g = frame.getGraphics();
-		render.setReferences(imgBuffer, frame, zoom, fullScreen, screen);
+		render.setReferences(imgBuffer, frame, zoom, filter, fullScreen, screen);
 	}
 	
 	//This will register which keys are being pressed and released.
@@ -426,7 +433,9 @@ public final class GUI implements KeyListener//, FrameListener
 		    add(zoom3 = new CheckboxMenuItem("Zoom 3x")); 
 		    zoom3.addItemListener(this); 
 		    add(zoom4 = new CheckboxMenuItem("Zoom 4x")); 
-			zoom4.addItemListener(this); 
+			zoom4.addItemListener(this);
+			
+			add(new FilterMenu());
 		}
 		
 		public void itemStateChanged(ItemEvent e)
@@ -435,7 +444,6 @@ public final class GUI implements KeyListener//, FrameListener
 			
 			if (e.getItemSelectable() == zoom1)
 			{
-				toggleFullScreen(false);
 				zoom1.setState(true);
 				zoom2.setState(false);
 				zoom3.setState(false);
@@ -444,7 +452,6 @@ public final class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom2)
 			{
-				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(true);
 				zoom3.setState(false);
@@ -453,7 +460,6 @@ public final class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom3)
 			{
-				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(false);
 				zoom3.setState(true);
@@ -462,12 +468,45 @@ public final class GUI implements KeyListener//, FrameListener
 			}
 			else if (e.getItemSelectable() == zoom4)
 			{
-				toggleFullScreen(false);
 				zoom1.setState(false);
 				zoom2.setState(false);
 				zoom3.setState(false);
 				zoom4.setState(true);
 				setZoom(4);
+			}
+		}
+	}
+	
+	private class FilterMenu extends Menu implements ItemListener
+	{
+		private CheckboxMenuItem simple;
+		private CheckboxMenuItem advmame;
+		
+		public FilterMenu()
+		{
+			super("Filter");
+			
+			add(simple = new CheckboxMenuItem("None",true));
+		    simple.addItemListener(this); 
+		    add(advmame = new CheckboxMenuItem("AdvMAME")); 
+		    advmame.addItemListener(this); 
+		}
+		
+		public void itemStateChanged(ItemEvent e)
+		{
+			System.out.println(e.paramString());
+			
+			if (e.getItemSelectable() == simple)
+			{
+				simple.setState(true);
+				advmame.setState(false);
+				setFilter(0);
+			}
+			else if (e.getItemSelectable() == advmame)
+			{
+				simple.setState(false);
+				advmame.setState(true);
+				setFilter(1);
 			}
 		}
 	}

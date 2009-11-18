@@ -4500,6 +4500,7 @@ public final class CPU extends Thread
 										
 										int byteIndex = (patternNum << 4) + (y << 1);
 										int bitSet = BIT7;
+										int backColor = bgColor0[yPix];
 										
 										for (int x = 0; x < 8; x++)
 										{
@@ -4513,7 +4514,7 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == bgColor0[yPix]))
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == backColor))
 												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}
@@ -4587,6 +4588,7 @@ public final class CPU extends Thread
 										
 										int byteIndex = (patternNum << 4) + (y << 1);
 										int bitSet = BIT7;
+										int backColor = bgColor0[yPix];
 										
 										for (int x = 0; x < 8; x++)
 										{
@@ -4600,7 +4602,7 @@ public final class CPU extends Thread
 														   ((VRAM[byteIndex+1] & bitSet) != 0 ? BIT1 : 0); // MSB
 											bitSet >>= 1;
 											
-											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == bgColor0[yPix]))
+											if (colorVal != 0 && ((flags & BIT7) == 0 || screen[mult + xPix] == backColor))
 												screen[mult + xPix] = myColor[colorVal];
 											xPix += deltaX;
 										}
