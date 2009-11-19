@@ -13,6 +13,7 @@ public final class GUI implements KeyListener//, FrameListener
 	private static Graphics g;
 	private static BufferedImage screen;
 	private static int[] imgBuffer;
+	private static int[] staticScreen;
 	private static int zoom;
 	private static int delayZoom;
 	private static GraphicsEnvironment ge;
@@ -32,6 +33,7 @@ public final class GUI implements KeyListener//, FrameListener
 	private static boolean buttonB = false;
 	private static boolean buttonSTART = false;
 	private static boolean buttonSELECT = false;
+	private static boolean buttonTHROTTLE = false;
 	private static int keyLEFT = KeyEvent.VK_LEFT;
 	private static int keyRIGHT = KeyEvent.VK_RIGHT;
 	private static int keyUP = KeyEvent.VK_UP;
@@ -40,6 +42,7 @@ public final class GUI implements KeyListener//, FrameListener
 	private static int keyB = KeyEvent.VK_Z;
 	private static int keySTART = KeyEvent.VK_ENTER;
 	private static int keySELECT = KeyEvent.VK_SPACE;
+	private static int keyTHROTTLE = KeyEvent.VK_BACK_QUOTE;
 	
 	public static void main(String[] args)
 	{
@@ -71,6 +74,7 @@ public final class GUI implements KeyListener//, FrameListener
 		int frames = 0;
 		long startT = System.nanoTime();
 
+		staticScreen = new int[screenWidth*screenHeight];
 		/*while(true)
 		{
 			frames++;
@@ -131,8 +135,14 @@ public final class GUI implements KeyListener//, FrameListener
 	{
 		if (zoom != delayZoom)
 			changeZoom();
-			
-		render.setGBVideo(gbScreen);
+		
+		if (zoom == 1) // Hopefully fast enough to finish during v-blank
+			render.setGBVideo(gbScreen);
+		else
+		{
+			System.arraycopy(gbScreen, 0, staticScreen, 0, staticScreen.length);
+			render.setGBVideo(staticScreen);
+		}
 		sem.drainPermits();
 		sem.release();
 		//render.requestFrame();
@@ -188,10 +198,14 @@ public final class GUI implements KeyListener//, FrameListener
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
-		if (key.isAltDown() && key.getKeyCode() == KeyEvent.VK_ENTER)
-			toggleFullScreen(!fullScreen);
+		//System.out.println(KeyEvent.getKeyText(key.getKeyCode()));
+		
+		
 			
-	   else if(key.getKeyCode() == keyLEFT)
+		if (cpu == null || !cpu.isAlive())
+			return;
+		else if (key.isAltDown() && key.getKeyCode() == KeyEvent.VK_ENTER)
+			toggleFullScreen(!fullScreen);		else if(key.getKeyCode() == keyLEFT)
 		{
 		   buttonLEFT = true;
 			cpu.joypadInt();
@@ -201,7 +215,7 @@ public final class GUI implements KeyListener//, FrameListener
 		   buttonRIGHT = true;
 			cpu.joypadInt();
 		}
-      else if(key.getKeyCode() == keyUP)
+		else if(key.getKeyCode() == keyUP)
 		{
 		   buttonUP = true;
 			cpu.joypadInt();
@@ -230,7 +244,11 @@ public final class GUI implements KeyListener//, FrameListener
 		{
 		   buttonSELECT = true;
 			cpu.joypadInt();
-		}  
+		}
+		else if(key.getKeyCode() == keyTHROTTLE)
+		{
+		   buttonTHROTTLE = true;
+		}
 	}
 	
 	public void keyReleased(KeyEvent key)
@@ -241,7 +259,7 @@ public final class GUI implements KeyListener//, FrameListener
 		else if(key.getKeyCode() == keyRIGHT)
 		   buttonRIGHT = false;
 			
-      else if(key.getKeyCode() == keyUP)
+      	else if(key.getKeyCode() == keyUP)
 		   buttonUP = false;
 		
 		else if(key.getKeyCode() == keyDOWN)
@@ -258,6 +276,9 @@ public final class GUI implements KeyListener//, FrameListener
 		
 		else if(key.getKeyCode() == keySELECT)
 		   buttonSELECT = false;
+		  
+		else if(key.getKeyCode() == keyTHROTTLE)
+			buttonTHROTTLE = false;
 		
 	}
 	
@@ -296,7 +317,11 @@ public final class GUI implements KeyListener//, FrameListener
 	public boolean getSelect()
 	{
 	   return buttonSELECT;
-	}	
+	}
+	public boolean throttleOff()
+	{
+	   return buttonTHROTTLE;
+	}
 	
 	//End of the key registering stuff. 	
 	private class FileMenu extends Menu implements ActionListener {
@@ -421,12 +446,16 @@ public final class GUI implements KeyListener//, FrameListener
 		private CheckboxMenuItem zoom2;
 		private CheckboxMenuItem zoom3;
 		private CheckboxMenuItem zoom4;
+		private CheckboxMenuItem throttle;
 		
 		public ViewMenu()
 		{
-			super("View");
+			super("Options");
 			
-			add(zoom1 = new CheckboxMenuItem("Zoom 1x",true));
+			add(throttle = new CheckboxMenuItem("Throttle", true)); 
+			throttle.addItemListener(this);
+			
+			add(zoom1 = new CheckboxMenuItem("Zoom 1x", true));
 		    zoom1.addItemListener(this); 
 		    add(zoom2 = new CheckboxMenuItem("Zoom 2x")); 
 		    zoom2.addItemListener(this); 
@@ -474,6 +503,10 @@ public final class GUI implements KeyListener//, FrameListener
 				zoom4.setState(true);
 				setZoom(4);
 			}
+			else if (e.getItemSelectable() == throttle)
+			{
+				cpu.setThrottle(throttle.getState());
+			}
 		}
 	}
 	
@@ -481,6 +514,7 @@ public final class GUI implements KeyListener//, FrameListener
 	{
 		private CheckboxMenuItem simple;
 		private CheckboxMenuItem advmame;
+		private CheckboxMenuItem eagle;
 		
 		public FilterMenu()
 		{
@@ -488,8 +522,10 @@ public final class GUI implements KeyListener//, FrameListener
 			
 			add(simple = new CheckboxMenuItem("None",true));
 		    simple.addItemListener(this); 
-		    add(advmame = new CheckboxMenuItem("AdvMAME")); 
+		    add(advmame = new CheckboxMenuItem("AdvMAME (2x/3x/4x)")); 
 		    advmame.addItemListener(this); 
+			add(eagle = new CheckboxMenuItem("Eagle (2x/4x)")); 
+		    eagle.addItemListener(this);
 		}
 		
 		public void itemStateChanged(ItemEvent e)
@@ -500,13 +536,22 @@ public final class GUI implements KeyListener//, FrameListener
 			{
 				simple.setState(true);
 				advmame.setState(false);
+				eagle.setState(false);
 				setFilter(0);
 			}
 			else if (e.getItemSelectable() == advmame)
 			{
 				simple.setState(false);
 				advmame.setState(true);
+				eagle.setState(false);
 				setFilter(1);
+			}
+			else if (e.getItemSelectable() == eagle)
+			{
+				simple.setState(false);
+				advmame.setState(false);
+				eagle.setState(true);
+				setFilter(2);
 			}
 		}
 	}

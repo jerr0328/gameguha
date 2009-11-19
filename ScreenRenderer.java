@@ -166,6 +166,34 @@ public final class ScreenRenderer extends Thread
 									}
 								}
 						break;
+						
+						case 2: // Eagle
+						
+							for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
+								{
+									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
+									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
+									int C = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel+1)];
+									int D = gbScreen[yPixel*GUI.screenWidth + (xPixel-1)];
+									int E = gbScreen[yPixel*GUI.screenWidth + xPixel];
+									int F = gbScreen[yPixel*GUI.screenWidth + (xPixel+1)];
+									int G = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel-1)];
+									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
+									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
+									
+									int E0 = yPixel*(4*GUI.screenWidth) + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (2*GUI.screenWidth);
+									int E3 = E2 + 1;
+									
+									buffer[E0] = (D==A && A==B) ? A : E;
+									buffer[E1] = (B==C && C==F) ? C : E;
+									buffer[E2] = (D==G && G==H) ? G : E;
+									buffer[E3] = (F==I && I==H) ? I : E;
+								}
+						
+						break;
 					}
 				break;
 				
@@ -173,6 +201,7 @@ public final class ScreenRenderer extends Thread
 					switch (filter)
 					{
 						case 0:
+						case 2:
 							y3 = -(GUI.screenWidth*3);
 							for(yPixel = 0; yPixel < 144; yPixel++)
 							{
@@ -381,6 +410,61 @@ public final class ScreenRenderer extends Thread
 										buffer[E2] = E;
 										buffer[E3] = E;
 									}
+								}
+							
+						break;
+						
+						case 2:
+							
+							myTemp = temp;
+							
+							for (yPixel = 1; yPixel < GUI.screenHeight-1; yPixel++)
+								for (xPixel = 1; xPixel < GUI.screenWidth-1; xPixel++)
+								{
+									int A = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel-1)];
+									int B = gbScreen[(yPixel-1)*GUI.screenWidth + xPixel];
+									int C = gbScreen[(yPixel-1)*GUI.screenWidth + (xPixel+1)];
+									int D = gbScreen[yPixel*GUI.screenWidth + (xPixel-1)];
+									int E = gbScreen[yPixel*GUI.screenWidth + xPixel];
+									int F = gbScreen[yPixel*GUI.screenWidth + (xPixel+1)];
+									int G = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel-1)];
+									int H = gbScreen[(yPixel+1)*GUI.screenWidth + xPixel];
+									int I = gbScreen[(yPixel+1)*GUI.screenWidth + (xPixel+1)];
+									
+									int E0 = yPixel*(4*GUI.screenWidth) + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (2*GUI.screenWidth);
+									int E3 = E2 + 1;
+									
+									myTemp[E0] = (D==A && A==B) ? A : E;
+									myTemp[E1] = (B==C && C==F) ? C : E;
+									myTemp[E2] = (D==G && G==H) ? G : E;
+									myTemp[E3] = (F==I && I==H) ? I : E;
+								}
+							
+							for (yPixel = 2; yPixel < (2*GUI.screenHeight)-2; yPixel++)
+								for (xPixel = 2; xPixel < (2*GUI.screenWidth)-2; xPixel++)
+								{
+									//buffer[GUI.screenWidth*4*yPixel + xPixel] = temp[GUI.screenWidth*2*yPixel + xPixel];
+									int A = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel-1)];
+									int B = myTemp[(yPixel-1)*(2*GUI.screenWidth) + xPixel];
+									int C = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel+1)];
+									int D = myTemp[yPixel*(2*GUI.screenWidth) + (xPixel-1)];
+									int E = myTemp[yPixel*(2*GUI.screenWidth) + xPixel];
+									int F = myTemp[yPixel*(2*GUI.screenWidth) + (xPixel+1)];
+									int G = myTemp[(yPixel+1)*(2*GUI.screenWidth) + (xPixel-1)];
+									int H = myTemp[(yPixel+1)*(2*GUI.screenWidth) + xPixel];
+									int I = myTemp[(yPixel+1)*(2*GUI.screenWidth) + (xPixel+1)];
+									
+									int E0 = yPixel*(8*GUI.screenWidth) + (xPixel << 1);
+									int E1 = E0 + 1;
+									int E2 = E0 + (4*GUI.screenWidth);
+									int E3 = E2 + 1;
+									
+									buffer[E0] = (D==A && A==B) ? A : E;
+									buffer[E1] = (B==C && C==F) ? C : E;
+									buffer[E2] = (D==G && G==H) ? G : E;
+									buffer[E3] = (F==I && I==H) ? I : E;
 								}
 							
 						break;
