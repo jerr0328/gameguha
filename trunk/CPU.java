@@ -4,8 +4,6 @@ public final class CPU extends Thread
 {
 	//boolean[] visited = new boolean[0x10000];
 	
-	private static final boolean throttle = true;
-	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
 	public static final int BIT5 = 1<<5;
@@ -36,6 +34,7 @@ public final class CPU extends Thread
 	private static boolean halt;
 	private static int newSerialInt;
 	private static boolean joypadFlag;
+	private static boolean throttle = true;
 	
 	private static final int[] colorBG = new int[4];
 	private static final int[] colorSP0 = new int[4];
@@ -80,6 +79,11 @@ public final class CPU extends Thread
 	public void setWaiting(boolean flag)
 	{
 		pleaseWait = flag;
+	}
+	
+	public void setThrottle(boolean flag)
+	{
+		throttle = flag;
 	}
 	
 	public void joypadInt()
@@ -4682,13 +4686,15 @@ public final class CPU extends Thread
 			windowOffset = 0;
 			frameCount++;
 			
-			if (throttle)
+			if (throttle && !gui.throttleOff())
 			{
 				try
 				{
 					long waitNano = (prevFrame + nsPerFrame) - System.nanoTime();
 					if (waitNano >= 1000000)
 						Thread.sleep(waitNano / 1000000);
+					//else
+					//	Thread.yield();
 				}
 				catch (InterruptedException e)
 				{
@@ -4696,8 +4702,8 @@ public final class CPU extends Thread
 				//while ((System.nanoTime() - prevFrame) < (1000000000/59.73))
 					//Thread.yield();
 			}
-			else
-				Thread.yield();
+			//else
+			//	Thread.yield();
 			
 			prevFrame = System.nanoTime();
 			
@@ -4706,6 +4712,16 @@ public final class CPU extends Thread
 				double secPer100 = (System.nanoTime()-startT) / 1000000000.0;
 				System.out.println((secPer100 * 10) + " ms per frame (" + (167.42/secPer100) + "% full speed)");
 				frameCount = 0;
+				if (!throttle || gui.throttleOff())
+				{
+					try
+					{
+						Thread.sleep(10);
+					}
+					catch (InterruptedException e)
+					{
+					}
+				}
 				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
 				startT = System.nanoTime();
 			}
