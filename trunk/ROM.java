@@ -11,12 +11,14 @@ public final class ROM{
 	private static int numRAMBanks;
 	private static int rom[][];
 	private static int ram[][];
+	private String path;
 	
 	public ROM(String filename){
 		this(new File(filename));
 	}
 	
 	public ROM(File file){
+		path = file.getPath();
 		load(file);
 		printTitle();
 		getCartType(true);
@@ -204,5 +206,23 @@ public final class ROM{
 			ptr++;
 		}
 		return sb.toString();
+	}
+	
+	public String getPath(){
+		return path;
+	}
+	public static void writeInt(BufferedOutputStream out, int x) throws IOException{
+		out.write(x>>24);
+		out.write((x>>16)&0xFF);
+		out.write((x>>8)&0xFF);
+		out.write(x&0xFF);
+	}
+	public static int readInt(BufferedInputStream in) throws IOException{
+		int ret=0;
+		ret = (in.read())<<24;
+		ret |= (in.read())<<16;
+		ret |= (in.read())<<8;
+		ret |= in.read();
+		return ret;
 	}
 }

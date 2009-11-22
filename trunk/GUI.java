@@ -335,6 +335,10 @@ public final class GUI implements KeyListener//, FrameListener
 			MenuItem mi; 
 		    add(mi = new MenuItem("Open")); 
 		    mi.addActionListener(this);
+		    add(mi = new MenuItem("Load")); 
+		    mi.addActionListener(this);
+		    add(mi = new MenuItem("Save")); 
+		    mi.addActionListener(this);
 		 	add(mi = new MenuItem("Run"));
 			mi.addActionListener(this);
 			add(mi = new MenuItem("Pause"));
@@ -383,6 +387,20 @@ public final class GUI implements KeyListener//, FrameListener
 					
 					cpu = new CPU(f.getDirectory()+file, gui);
 					cpu.start();
+				}
+			}
+			else if(item.equals("Load")){
+				if(cpu!=null){
+					synchronized(cpu){
+						cpu.setLoadState(true);
+					}
+				}
+			}
+			else if(item.equals("Save")){
+				if(cpu!=null){
+					synchronized(cpu){
+						cpu.setSaveState(true);
+					}
 				}
 			}
 			else if(item.equals("Run")){

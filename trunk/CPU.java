@@ -1,3 +1,4 @@
+import java.io.*;
 import java.util.*;
 
 public final class CPU extends Thread
@@ -32,6 +33,8 @@ public final class CPU extends Thread
 	private static int mbcLower = 1;
 	private static boolean pleaseWait;
 	private static boolean halt;
+	private static boolean saveState;
+	private static boolean loadState;
 	private static int newSerialInt;
 	private static boolean joypadFlag;
 	private static boolean throttle = true;
@@ -55,6 +58,16 @@ public final class CPU extends Thread
 		snd = new Sound();
 		pleaseWait = false; // Not in a waiting state on first run
 		halt = false;
+		loadState = false;
+		saveState = false;
+	}
+	
+	public void setSaveState(boolean flag) {
+		saveState = flag;
+	}
+
+	public void setLoadState(boolean flag) {
+		loadState = flag;
 	}
 	
 	public String toString()
@@ -545,15 +558,15 @@ public final class CPU extends Thread
 		int prevTileMap = -1;
 		int prevColors = -1;
 		
-		int val;
-		int memval;
-		int index;
+		int val = 0;
+		int memval = 0;
+		int index = 0;
 		int frameCount = 0;
 		int numCycles = 0;
 		int scanline = 0;
 		int nextHBlank = CYCLES_PER_LINE;
 		//int nextVBlank = CYCLES_PER_LINE*144;
-		int[] myColor;
+		int[] myColor = null;
 		final int[] VRAM = mem[4];
 		final int[] HRAM = mem[7];
 		
@@ -617,6 +630,197 @@ public final class CPU extends Thread
 			    }
 		    	if(halt){
 		    		return;
+		    	}
+		    	// Save state... since all variables are local to this function, we will throw all the save state stuff here
+		    	if(saveState){
+		    		String path = rom.getPath(), filename;
+		    		if(path.endsWith(".gb")){
+		    			filename = path.substring(0, path.length()-3) + ".sav"; // get rid of ".gb" and add in ".sav"
+		    		}
+		    		else if(path.endsWith(".gbc")){ // Same for ,gbc
+		    			filename = path.substring(0, path.length()-4) + ".sav";
+		    		}
+		    		else{ // Just tack on .sav if it's some weird filename we don't recognize
+		    			filename = path + ".sav";			
+		    		}
+		    		try{
+		    			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
+		    			System.out.printf("%d %d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
+		    			out.write(PC>>8);
+		    			out.write(PC&0xFF);
+		    			out.write(SP>>8);
+		    			out.write(SP&0xFF);
+		    			out.write(AREG);
+		    			out.write(BREG);
+		    			out.write(CREG);
+		    			out.write(DREG);
+		    			out.write(EREG);
+		    			out.write(FREG);
+		    			out.write(HREG);
+		    			out.write(LREG);
+		    			out.write((IME?1:0));
+		    			/*
+		    			for(int i: background){
+		    				out.write(i);
+		    			}
+		    			for(int i: screen){
+		    				out.write(i);
+		    			}
+		    			for(int i: prevTiles){
+		    				out.write(i);
+		    			}
+		    			for(boolean i: spritesOff){
+		    				out.write((i?1:0));
+		    			}
+		    			for(int i: bgColor0){
+		    				out.write(i);
+		    			}
+		    			out.write(windowOffset);
+		    			out.write(prevTileMap);
+		    			out.write(prevColors);
+		    			*/
+		    			ROM.writeInt(out,val);
+		    			ROM.writeInt(out,memval);
+		    			ROM.writeInt(out,index);
+		    			ROM.writeInt(out,frameCount);
+		    			ROM.writeInt(out,numCycles);
+		    			ROM.writeInt(out,scanline);
+		    			ROM.writeInt(out,nextHBlank);
+		    			
+
+		    			/*
+		    			for(int i: myColor){
+		    				out.write(i);
+		    			}
+		    			*/
+		    			for(int i: VRAM){
+		    				out.write(i);
+		    			}
+		    			for(int i: HRAM){
+		    				out.write(i);
+		    			}
+		    			
+		    			int ramsize = rom.getRAMSize(false);
+		    			for(int i: mem[5]){
+		    				out.write(i);
+		    			}
+		    			for(int i: mem[6]){
+		    				out.write(i);
+		    			}
+		    			for(int i = 1; i < ramsize; i++){
+		    				for(int k: rom.getRAM(i)){
+		    					out.write(k);
+		    				}
+		    			}
+		    			
+		    			out.close();
+		    			System.out.println("Save Success");
+
+		    		}
+		    		catch(Exception e){
+		    			e.printStackTrace();
+		    		}
+		    		saveState = false;
+		    		
+		    	}
+		    	if(loadState){
+		    		String path = rom.getPath(), filename;
+		    		if(path.endsWith(".gb")){
+		    			filename = path.substring(0, path.length()-3) + ".sav"; // get rid of ".gb" and add in ".sav"
+		    		}
+		    		else if(path.endsWith(".gbc")){ // Same for ,gbc
+		    			filename = path.substring(0, path.length()-4) + ".sav";
+		    		}
+		    		else{ // Just tack on .sav if it's some weird filename we don't recognize
+		    			filename = path + ".sav";			
+		    		}
+		    		try{
+		    			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(filename));
+		    			//System.out.println(buf.read());
+		    			PC = (buf.read())<<8;
+		    			PC |= buf.read();
+		    			SP = (buf.read())<<8;
+		    			SP |= buf.read();
+		    			AREG=buf.read();
+		    			BREG=buf.read();
+		    			CREG=buf.read();
+		    			DREG=buf.read();
+		    			EREG=buf.read();
+		    			FREG=buf.read();
+		    			HREG=buf.read();
+		    			LREG=buf.read();
+		    			System.out.printf("%d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
+		    			IME = (buf.read()==1);
+		    			/*
+		    			for(int i=0; i< background.length; i++){
+		    				background[i]=buf.read();
+		    			}
+		    			for(int i=0; i< screen.length; i++){
+		    				screen[i]=buf.read();
+		    			}
+		    			for(int i=0; i< prevTiles.length; i++){
+		    				prevTiles[i]=buf.read();
+		    			}
+		    			for(int i=0; i< spritesOff.length; i++){
+		    				spritesOff[i]=(buf.read()==1);
+		    			}
+		    			for(int i=0; i< bgColor0.length; i++){
+		    				bgColor0[i]=buf.read();
+		    			}
+		    			
+		    			windowOffset = buf.read();
+		    			prevTileMap = buf.read();
+		    			prevColors = buf.read();
+		    			*/
+		    			// Fix
+		    			windowOffset = 0;
+		    			prevTileMap = -1;
+		    			prevColors = -1;
+		    			
+		    			val = ROM.readInt(buf);
+		    			memval = ROM.readInt(buf);
+		    			index = ROM.readInt(buf);
+		    			frameCount = ROM.readInt(buf);
+		    			numCycles = ROM.readInt(buf);
+		    			scanline = ROM.readInt(buf);
+		    			nextHBlank = ROM.readInt(buf);
+
+		    			/*
+		    			for(int i=0; i< myColor.length; i++){
+		    				myColor[i]=buf.read();
+		    			}
+		    			*/
+		    			for(int i=0; i< VRAM.length; i++){
+		    				VRAM[i]=buf.read();
+		    			}
+		    			for(int i=0; i< HRAM.length; i++){
+		    				HRAM[i]=buf.read();
+		    			}
+		    			int ramsize = rom.getRAMSize(false);
+		    			for(int i=0; i< mem[5].length; i++){
+		    				mem[5][i]=buf.read();
+		    			}
+		    			for(int i=0; i< mem[6].length; i++){
+		    				mem[6][i]=buf.read();
+		    			}
+		    			for(int i = 1; i < ramsize; i++){
+		    				int temp[] = new int[0x2000];
+		    				for(int j = 0; j < temp.length; j++){
+		    					temp[j]=buf.read();
+		    				}
+		    				int bank[] = rom.getRAM(i);
+		    				bank = temp;
+		    			}
+		    			
+		    			buf.close();
+		    			System.out.println("Load Success");
+
+		    		}
+		    		catch(Exception e){
+		    			e.printStackTrace();
+		    		}
+		    		
+		    		loadState = false;
 		    	}
 			}
 			
