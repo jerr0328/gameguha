@@ -1,6 +1,7 @@
 //Sound class
 import java.io.*;
 import javax.sound.sampled.*;
+import java.util.concurrent.*; 
 
 class SquareWaveGen
 {
@@ -218,8 +219,9 @@ class NoiseGen
 }
 
 
-public class Sound {
+public class Sound extends Thread {
 	
+	private final Semaphore sem;
 	SourceDataLine soundLine;
 	int defaultSampleRate = 44100; // 44.1Khz
 	int defaultBufferLength = 200;
@@ -239,8 +241,9 @@ public class Sound {
 		channel4Enable = chan4;
 	}
 			
-	public Sound()
+	public Sound(Semaphore sem)
 	{
+		this.sem = sem;
 		soundLine = initSoundHardware();
 		channel1 = new SquareWaveGen(defaultSampleRate);
 		channel2 = new SquareWaveGen(defaultSampleRate);
@@ -248,52 +251,79 @@ public class Sound {
 		channel4 = new NoiseGen(defaultSampleRate);
 	}
 	
-/*	public void outputSound()
+	public void run()
 	{
-		if(soundEnabled)
+		for(;;)
 		{
-			int numSamples;
+		
+			if(soundEnabled)
+			{
+	
+				try
+				{
+					sem.acquire();
+				}
+				catch(Throwable e)
+				{
+					e.printStackTrace();
+				}
 			
-			if(defaultSampleRate / 28 >= soundLine.available() * 2)
-				numSamples = soundLine.available() * 2;
-			else
-				numSamples = (defaultSampleRate / 28) & 0xFFFE;
+				int numSamples;
+			
+				if(defaultSampleRate / 28 >= soundLine.available() * 2)
+					numSamples = soundLine.available() * 2;
+				else
+					numSamples = (defaultSampleRate / 28) & 0xFFFE;
 	
 		
-		byte[] b = new byte[numSamples];
-	//	if(channel1Enable)
-	//		channel1.play(b,numSamples/2,0);
-		if(channel2Enable)
-			channel2.play(b,numSamples/2,0);
-	//	if(channel3Enable)
-	//		channel3.play(b,numSamples/2,0);
-	//	if(channel4Enable)
-	//		channel4.play(b,numSamples/2,0);
+			byte[] b = new byte[numSamples];
+		//	if(channel1Enable)
+		//		channel1.play(b,numSamples/2,0);
+			if(channel2Enable)
+				channel2.play(b,numSamples/2,0);
+		//	if(channel3Enable)
+		//		channel3.play(b,numSamples/2,0);
+		//	if(channel4Enable)
+		//		channel4.play(b,numSamples/2,0);
 		
-		soundLine.write(b,0,numSamples);
+			soundLine.write(b,0,numSamples);
 		
-		}
+			}
 			
-	}*/
-	public void outputSound()
-	{
-		if(soundEnabled)
-		{
-			int numSamples;
-			
-			if(defaultSampleRate / 28 >= soundLine.available() * 2)
-				numSamples = soundLine.available() * 2;
-			else
-				numSamples = (defaultSampleRate / 28) & 0xFFFE;
-				
-		byte[] b = new byte[numSamples];
-		
-		for(int i=0;i<numSamples;i++)
-			b[i] = (byte)((Math.random() * 256)-128);
-			
-		soundLine.write(b,0,numSamples);
 		}
 	}
+/*	public void run()
+	{
+		
+		for(;;)
+		{
+			try
+			{
+				sem.acquire();
+			}
+			catch(Throwable e)
+			{
+				e.printStackTrace();
+			}
+			
+			if(soundEnabled)
+			{
+				int numSamples;
+			
+				if(defaultSampleRate / 28 >= soundLine.available() * 2)
+					numSamples = soundLine.available() * 2;
+				else
+					numSamples = (defaultSampleRate / 28) & 0xFFFE;
+				
+			byte[] b = new byte[numSamples];
+		
+			for(int i=0;i<numSamples;i++)
+				b[i] = (byte)((Math.random() * 256)-128);
+			
+			soundLine.write(b,0,numSamples);
+			}
+		}
+	}*/
 	
 	public SourceDataLine initSoundHardware() 
 	{
