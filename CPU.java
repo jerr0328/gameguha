@@ -55,7 +55,6 @@ public final class CPU extends Thread
 		mbc = rom.getCartType(false);
 		System.out.println("mbc num: " + mbc);
 		gui = guiPointer;
-		snd = new Sound();
 		pleaseWait = false; // Not in a waiting state on first run
 		halt = false;
 		loadState = false;
@@ -73,6 +72,11 @@ public final class CPU extends Thread
 	public String toString()
 	{
 		return rom.getTitle();
+	}
+	
+	public void setSound(Sound snd)
+	{
+		this.snd = snd;
 	}
 	
 	public boolean getHalt()
@@ -4385,8 +4389,10 @@ public final class CPU extends Thread
 							}
 						}
 						
-						//	if(snd.soundEnabled)
-						//		snd.outputSound();
+						/*	if(snd.soundEnabled)
+								snd.outputSound();*/
+								
+								gui.genSound();
 						
 						// Draw current scanline
 						if (scanline < GUI.screenHeight)

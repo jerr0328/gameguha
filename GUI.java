@@ -9,6 +9,8 @@ public final class GUI implements KeyListener//, FrameListener
 	public static final int screenWidth = 160;
 	public static final int screenHeight = 144;
 	private static Semaphore sem;
+	private static Semaphore sndSem;
+	private static Sound snd;
 	private static CPU cpu;
 	private static Graphics g;
 	private static BufferedImage screen;
@@ -90,6 +92,16 @@ public final class GUI implements KeyListener//, FrameListener
 		}*/
 		
 		render.start();
+		
+		sndSem = new Semaphore(0);
+		snd = new Sound(sndSem);
+		snd.start();
+		
+	}
+	
+	public void genSound()
+	{
+		sndSem.release();
 	}
 	
 	public void newGUIFrame(boolean undecorated)
@@ -205,7 +217,8 @@ public final class GUI implements KeyListener//, FrameListener
 		if (cpu == null || !cpu.isAlive())
 			return;
 		else if (key.isAltDown() && key.getKeyCode() == KeyEvent.VK_ENTER)
-			toggleFullScreen(!fullScreen);		else if(key.getKeyCode() == keyLEFT)
+			toggleFullScreen(!fullScreen);
+		else if(key.getKeyCode() == keyLEFT)
 		{
 		   buttonLEFT = true;
 			cpu.joypadInt();
@@ -386,7 +399,10 @@ public final class GUI implements KeyListener//, FrameListener
 					}
 					
 					cpu = new CPU(f.getDirectory()+file, gui);
+					cpu.setSound(snd);
 					cpu.start();
+					
+					
 				}
 			}
 			else if(item.equals("Load")){
