@@ -459,7 +459,7 @@ public final class CPU extends Thread
 						return (mem[7][0x1F16] = (val & (BIT6 | BIT7)));
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
 						snd.channel2.setVolumeEnvelope(
-						((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & BIT3),(val & (BIT2|BIT1|BIT0)));
+						((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & (BIT2|BIT1|BIT0)),(val & BIT3));
 						return val;
 					case 0xFF18: // Channel 2 Frequency Lo (W)
 						snd.channel2.setFrequencyLo(val);
@@ -4388,9 +4388,6 @@ public final class CPU extends Thread
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT3);
 							}
 						}
-						
-						/*	if(snd.soundEnabled)
-								snd.outputSound();*/
 								
 								gui.genSound();
 						

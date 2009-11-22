@@ -56,6 +56,7 @@ class SquareWaveGen
 	
 		public void setSweep(int time, int num, int decrease)
 		{
+		//	System.out.println("time "+time+" num "+num+" dec "+decrease);
 			timeSweep = (time + 1) >> 2;
 			numSweep = num;
 			decreaseSweep = decrease;
@@ -87,6 +88,7 @@ class SquareWaveGen
 
 		public void setVolumeEnvelope(int initVol, int numSteps, int increase)
 		{
+			System.out.println("initVal "+initVol+" numSteps "+numSteps+" inc "+increase);
 			initialVolume = initVol;
 			numStepsEnvelope = numSteps;
 			if(increase == 8)
