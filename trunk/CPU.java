@@ -60,6 +60,9 @@ public final class CPU extends Thread
 		halt = false;
 		loadState = false;
 		saveState = false;
+		
+		System.out.println("***" + fileName);
+		System.out.println("**" + rom.getPath());
 	}
 	
 	public void setSaveState(boolean flag) {
@@ -735,6 +738,7 @@ public final class CPU extends Thread
 		    	}
 		    	if(loadState){
 		    		String path = rom.getPath(), filename;
+		    		System.out.println(path);
 		    		if(path.endsWith(".gb")){
 		    			filename = path.substring(0, path.length()-3) + ".sav"; // get rid of ".gb" and add in ".sav"
 		    		}
