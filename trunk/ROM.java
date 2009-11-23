@@ -64,7 +64,6 @@ public final class ROM{
 	
 	public ROM(File file){
 		this.path = file.getPath();
-		System.out.println("*"+path);
 		if(path.toLowerCase().endsWith(".zip"))
 		{
 			File unzipped = new File(unZip(path));
@@ -264,7 +263,6 @@ public final class ROM{
 	}
 	
 	public String getPath(){
-		System.out.println(path);
 		return this.path;
 	}
 	
