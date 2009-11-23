@@ -61,7 +61,7 @@ public final class GUI implements KeyListener//, FrameListener
 	
 		mb = new MenuBar();
 		mb.add(new FileMenu(frame, this));
-		mb.add(new ViewMenu());
+		mb.add(new OptionsMenu());
 		mb.add(new SoundMenu());
 	    	
 		zoom = 1;
@@ -354,17 +354,15 @@ public final class GUI implements KeyListener//, FrameListener
 			mw = m;
 			gui = g;
 			MenuItem mi; 
-		    add(mi = new MenuItem("Open")); 
+		    add(mi = new MenuItem("Open ROM")); 
 		    mi.addActionListener(this);
-		    add(mi = new MenuItem("Load")); 
+		    add(mi = new MenuItem("Load state")); 
 		    mi.addActionListener(this);
-		    add(mi = new MenuItem("Save")); 
+		    add(mi = new MenuItem("Save state")); 
 		    mi.addActionListener(this);
-		 	add(mi = new MenuItem("Run"));
-			mi.addActionListener(this);
 			add(mi = new MenuItem("Pause"));
 			mi.addActionListener(this);
-			add(mi = new MenuItem("Controls"));
+		 	add(mi = new MenuItem("Resume"));
 			mi.addActionListener(this);
 		    add(mi = new MenuItem("Exit")); 
 		    mi.addActionListener(this); 
@@ -372,7 +370,7 @@ public final class GUI implements KeyListener//, FrameListener
 		
 		public void actionPerformed(ActionEvent e) { 
 			String item = e.getActionCommand(); 
-			if (item.equals("Open")){
+			if (item.equals("Open ROM")){
 				//mw.exit(); 
 				FileDialog f = new FileDialog(mw, "Open ROM");
 				f.setVisible(true);
@@ -413,21 +411,21 @@ public final class GUI implements KeyListener//, FrameListener
 					
 				}
 			}
-			else if(item.equals("Load")){
+			else if(item.equals("Load state")){
 				if(cpu!=null){
 					synchronized(cpu){
 						cpu.setLoadState(true);
 					}
 				}
 			}
-			else if(item.equals("Save")){
+			else if(item.equals("Save state")){
 				if(cpu!=null){
 					synchronized(cpu){
 						cpu.setSaveState(true);
 					}
 				}
 			}
-			else if(item.equals("Run")){
+			else if(item.equals("Resume")){
 				if(cpu!=null)
 				{
 					if(!cpu.getWaiting())
@@ -473,16 +471,12 @@ public final class GUI implements KeyListener//, FrameListener
 				System.exit(0); //messy, probably should pass this a window event
 								//not that I know how... :x
 			}
-			else if(item.equals("Controls"))
-			{
-			   Controls keyset = new Controls();  
-			}
 			else
 				System.out.println("Selected FileMenu " + item); 
 		} 
 	}
 	
-	private class ViewMenu extends Menu implements ItemListener
+	private class OptionsMenu extends Menu implements ItemListener, ActionListener
 	{
 		private CheckboxMenuItem zoom1;
 		private CheckboxMenuItem zoom2;
@@ -490,9 +484,13 @@ public final class GUI implements KeyListener//, FrameListener
 		private CheckboxMenuItem zoom4;
 		private CheckboxMenuItem throttle;
 		
-		public ViewMenu()
+		public OptionsMenu()
 		{
 			super("Options");
+			
+			MenuItem mi;
+			add(mi = new MenuItem("Controls"));
+			mi.addActionListener(this);
 			
 			add(throttle = new CheckboxMenuItem("Throttle", true)); 
 			throttle.addItemListener(this);
@@ -507,6 +505,15 @@ public final class GUI implements KeyListener//, FrameListener
 			zoom4.addItemListener(this);
 			
 			add(new FilterMenu());
+		}
+		
+		public void actionPerformed(ActionEvent e) { 
+			String item = e.getActionCommand(); 
+			if(item.equals("Controls"))
+			{
+			   Controls keyset = new Controls();  
+			}
+			
 		}
 		
 		public void itemStateChanged(ItemEvent e)
@@ -598,41 +605,52 @@ public final class GUI implements KeyListener//, FrameListener
 		}
 	}
 	
-	// This is broken: see my ViewMenu for a correct example of handling CheckBoxMenuItems
-	private class SoundMenu extends Menu implements ActionListener {
+	// // This is broken: see my ViewMenu for a correct example of handling CheckBoxMenuItems
+	private class SoundMenu extends Menu implements ItemListener {
 		//Frame mw;
+		private CheckboxMenuItem channel1;
+		private CheckboxMenuItem channel2;
+		private CheckboxMenuItem channel3;
+		private CheckboxMenuItem channel4;
+		private CheckboxMenuItem mute;
 		public SoundMenu(){
 			super("Sound");
 			//mw = m;
-			MenuItem mi; 
-			add(mi = new CheckboxMenuItem("Sound Enable",true));
-		    mi.addActionListener(this); 
-		    add(mi = new CheckboxMenuItem("Channel 1")); 
-		    mi.addActionListener(this); 
-		    add(mi = new CheckboxMenuItem("Channel 2")); 
-		    mi.addActionListener(this); 
-		    add(mi = new CheckboxMenuItem("Channel 3")); 
-		    mi.addActionListener(this); 
-		    add(mi = new CheckboxMenuItem("Channel 4")); 
-		    mi.addActionListener(this); 
+			add(mute = new CheckboxMenuItem("Mute"));
+		    mute.addItemListener(this); 
+		    add(channel1 = new CheckboxMenuItem("Channel 1",true)); 
+		    channel1.addItemListener(this); 
+		    add(channel2 = new CheckboxMenuItem("Channel 2",true)); 
+		    channel2.addItemListener(this);  
+		    add(channel3 = new CheckboxMenuItem("Channel 3",true)); 
+		    channel3.addItemListener(this); 
+		    add(channel4 = new CheckboxMenuItem("Channel 4",true)); 
+		    channel4.addItemListener(this); 
 		}
-		public void actionPerformed(ActionEvent e) { 
-			String item = e.getActionCommand(); 
-			if (item.equals("Sound Enable")){
-				System.out.println("***");
-				// Toggle sound
+		public void itemStateChanged(ItemEvent e)
+		{  
+			System.out.println(e.paramString());
+			if (e.getItemSelectable() == mute){
+				System.out.println("* "+mute.getState());
+				snd.setSoundEnable(!mute.getState());
+				System.out.println("** "+mute.getState());
+				//if(!mute.getState())snd.setSampleRate(44100);
 			}
-			else if(item.equals("Channel 1")){
+			else if(e.getItemSelectable() == channel1){
 				// Toggle channel
+				snd.setChan1(channel1.getState());
 			}
-			else if(item.equals("Channel 2")){
+			else if(e.getItemSelectable() == channel2){
 				// Toggle channel
+				snd.setChan2(channel2.getState());
 			}
-			else if(item.equals("Channel 3")){
+			else if(e.getItemSelectable() == channel3){
 				// Toggle channel
+				snd.setChan3(channel3.getState());
 			}
-			else if(item.equals("Channel 4")){
+			else if(e.getItemSelectable() == channel4){
 				// Toggle channel
+				snd.setChan4(channel4.getState());
 			}
 		}
 	}
