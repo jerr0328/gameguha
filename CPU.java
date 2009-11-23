@@ -60,9 +60,6 @@ public final class CPU extends Thread
 		halt = false;
 		loadState = false;
 		saveState = false;
-		
-		System.out.println("***" + fileName);
-		System.out.println("**" + rom.getPath());
 	}
 	
 	public void setSaveState(boolean flag) {
@@ -658,7 +655,7 @@ public final class CPU extends Thread
 		    		}
 		    		try{
 		    			BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filename));
-		    			System.out.printf("%d %d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
+		    			//System.out.printf("%d %d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
 		    			out.write(PC>>8);
 		    			out.write(PC&0xFF);
 		    			out.write(SP>>8);
@@ -691,15 +688,25 @@ public final class CPU extends Thread
 		    			out.write(windowOffset);
 		    			out.write(prevTileMap);
 		    			out.write(prevColors);
-		    			*/
+		    			
 		    			ROM.writeInt(out,val);
 		    			ROM.writeInt(out,memval);
 		    			ROM.writeInt(out,index);
+		    			*/
 		    			ROM.writeInt(out,frameCount);
 		    			ROM.writeInt(out,numCycles);
 		    			ROM.writeInt(out,scanline);
 		    			ROM.writeInt(out,nextHBlank);
 		    			
+		    			for(int i: colorBG){
+		    				out.write(i);
+		    			}
+		    			for(int i: colorSP0){
+		    				out.write(i);
+		    			}
+		    			for(int i: colorSP1){
+		    				out.write(i);
+		    			}
 
 		    			/*
 		    			for(int i: myColor){
@@ -738,7 +745,6 @@ public final class CPU extends Thread
 		    	}
 		    	if(loadState){
 		    		String path = rom.getPath(), filename;
-		    		System.out.println(path);
 		    		if(path.endsWith(".gb")){
 		    			filename = path.substring(0, path.length()-3) + ".sav"; // get rid of ".gb" and add in ".sav"
 		    		}
@@ -763,7 +769,7 @@ public final class CPU extends Thread
 		    			FREG=buf.read();
 		    			HREG=buf.read();
 		    			LREG=buf.read();
-		    			System.out.printf("%d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
+		    			//System.out.printf("%d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
 		    			IME = (buf.read()==1);
 		    			/*
 		    			for(int i=0; i< background.length; i++){
@@ -790,33 +796,36 @@ public final class CPU extends Thread
 		    			windowOffset = 0;
 		    			prevTileMap = -1;
 		    			prevColors = -1;
-		    			
+		    			/*
 		    			val = ROM.readInt(buf);
 		    			memval = ROM.readInt(buf);
-		    			index = ROM.readInt(buf);
+		    			index = ROM.readInt(buf);*/
 		    			frameCount = ROM.readInt(buf);
 		    			numCycles = ROM.readInt(buf);
 		    			scanline = ROM.readInt(buf);
 		    			nextHBlank = ROM.readInt(buf);
+		    			
 
 		    			/*
 		    			for(int i=0; i< myColor.length; i++){
 		    				myColor[i]=buf.read();
 		    			}
 		    			*/
-		    			for(int i=0; i< VRAM.length; i++){
+		    			for(int i=0; i< 4; i++)
+		    				colorBG[i]=buf.read();
+		    			for(int i=0; i< 4; i++)
+		    				colorSP0[i]=buf.read();
+		    			for(int i=0; i< 4; i++)
+		    				colorSP1[i]=buf.read();
+		    			for(int i=0; i< VRAM.length; i++)
 		    				VRAM[i]=buf.read();
-		    			}
-		    			for(int i=0; i< HRAM.length; i++){
+		    			for(int i=0; i< HRAM.length; i++)
 		    				HRAM[i]=buf.read();
-		    			}
 		    			int ramsize = rom.getRAMSize(false);
-		    			for(int i=0; i< mem[5].length; i++){
+		    			for(int i=0; i< mem[5].length; i++)
 		    				mem[5][i]=buf.read();
-		    			}
-		    			for(int i=0; i< mem[6].length; i++){
+		    			for(int i=0; i< mem[6].length; i++)
 		    				mem[6][i]=buf.read();
-		    			}
 		    			for(int i = 1; i < ramsize; i++){
 		    				int temp[] = new int[0x2000];
 		    				for(int j = 0; j < temp.length; j++){
