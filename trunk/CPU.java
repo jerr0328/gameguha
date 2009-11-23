@@ -454,6 +454,32 @@ public final class CPU extends Thread
 						return (mem[7][0x1F07] = val);
 					case 0xFF0F:
 						return (mem[7][0x1F0F] = (val & 0x1F));
+					case 0xFF10: // Channel 1 Sound Sweep
+						sVal = (byte)val;
+						snd.channel1.setSweep(sVal & (BIT6 | BIT5 | BIT4),sVal & BIT3, sVal & (BIT2 | BIT1 | BIT0));
+						return (mem[7][0x1F10] = sVal);
+					case 0xFF11: // Channel 1 Sound Length/Wave Pattern Duty 
+						sVal = (byte)val;
+						snd.channel1.setSoundLength(sVal & ~(BIT6 | BIT7));
+						snd.channel1.setWavePatternDuty((sVal & (BIT6 | BIT7) >> 6));
+						return (mem[7][0x1F16] = (sVal & (BIT6 | BIT7)));
+					case 0xFF12: // Channel 1 Volume Envelope
+						sVal = (byte)val;
+						snd.channel1.setVolumeEnvelope(
+						((sVal & 0xF0 ) >> 4),(sVal & 0x07),(sVal & 0x08));
+						return sVal;
+					case 0xFF13: // Channel 1 Frequency Lo (W)
+						snd.channel1.setFrequencyLo(val);
+						return (mem[7][0x1F14] = val);
+					case 0xFF14: // Channel 1 Frequency Hi (R/W)
+						sVal = (byte)val;
+						snd.channel1.setSoundLength(val & BIT7);
+						snd.channel1.setCounter(val & BIT6);
+						snd.channel1.setFrequencyHi(val & (BIT2|BIT1|BIT0));
+						if((val & BIT7) == -1)
+							snd.channel1.setSoundLength(-1);
+
+						return (mem[7][0x1F14] = (val & BIT6));
 					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
 						sVal = (byte)val;
 						snd.channel2.setSoundLength(sVal & ~(BIT6 | BIT7));
@@ -461,23 +487,28 @@ public final class CPU extends Thread
 						return (mem[7][0x1F16] = (sVal & (BIT6 | BIT7)));
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
 						sVal = (byte)val;
-						System.out.println("val is "+sVal);
 						snd.channel2.setVolumeEnvelope(
 						((sVal & 0xF0 ) >> 4),(sVal & 0x07),(sVal & 0x08));
-						return sVal;
+						return (mem[7][0x1F17] = sVal);
 					case 0xFF18: // Channel 2 Frequency Lo (W)
-						sVal = (byte)val;
-						snd.channel2.setFrequencyLo(sVal);
-						return sVal;
+						snd.channel2.setFrequency( ( ( (int)(mem[7][0x1F19]) &0x07) <<8) + mem[7][0x1F18]);
+						return (mem[7][0x1F18] = val);
 					case 0xFF19: // Channel 2 Frequency Hi (R/W)
 						sVal = (byte)val;
-						snd.channel2.setSoundLength(sVal & BIT7);
-						snd.channel2.setCounter(sVal & BIT6);
-						snd.channel2.setFrequencyHi(sVal & (BIT2|BIT1|BIT0));
-						if((sVal & BIT7) == -1)
+						if((mem[7][0x1F19] & 0x80) != 0)
+						{
+							snd.channel2.setSoundLength(mem[7][0x1F21] & 0x3F);
+							snd.channel2.setVolumeEnvelope((mem[7][0x1F17] & 0xF0) >>4, (mem[7][0x1F17] & 0x07), (mem[7][0x1F17] & 0x08));
+						}
+						if((mem[7][0x1F19] & 0x40) == 0)
+						{
 							snd.channel2.setSoundLength(-1);
+						}
+							snd.channel2.setFrequency( ((int)(mem[7][0x1F19] & 0x07) <<8) + mem[7][0x1F18]);
 						
 						return (mem[7][0x1F19] = (val & BIT6));
+					case 0xFF21: //Channel 4 Volume Envelope
+						return (mem[7][0x1F21] = val);
 					case 0xFF40:
 						return (mem[7][0x1F40] = val);
 					case 0xFF41:
