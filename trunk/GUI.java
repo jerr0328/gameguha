@@ -45,6 +45,8 @@ public final class GUI implements KeyListener//, FrameListener
 	private static int keySTART = KeyEvent.VK_ENTER;
 	private static int keySELECT = KeyEvent.VK_SPACE;
 	private static int keyTHROTTLE = KeyEvent.VK_BACK_QUOTE;
+	private static int keySAVE = KeyEvent.VK_F1;
+	private static int keyLOAD = KeyEvent.VK_F2;
 	
 	public static void main(String[] args)
 	{
@@ -292,6 +294,12 @@ public final class GUI implements KeyListener//, FrameListener
 		  
 		else if(key.getKeyCode() == keyTHROTTLE)
 			buttonTHROTTLE = false;
+	   
+		else if(key.getKeyCode() == keySAVE)
+			cpu.setSaveState(true);
+	   
+		else if(key.getKeyCode() == keyLOAD)
+			cpu.setLoadState(true);
 		
 	}
 	
@@ -630,9 +638,9 @@ public final class GUI implements KeyListener//, FrameListener
 	}
 	
    public class Controls  implements ActionListener, KeyListener {
-	   public int keyLEFT, keyRIGHT, keyUP, keyDOWN, keyA, keyB, keySTART, keySELECT;
-		private Label leftL, rightL, upL, downL, aL, bL, startL, selectL;
-		private TextField leftT, rightT, upT, downT, aT, bT, startT, selectT;
+	   public int keyLEFT, keyRIGHT, keyUP, keyDOWN, keyA, keyB, keySTART, keySELECT, keySAVE, keyLOAD;
+		private Label leftL, rightL, upL, downL, aL, bL, startL, selectL, saveL, loadL;
+		private TextField leftT, rightT, upT, downT, aT, bT, startT, selectT, saveT, loadT;
 		private Button OK, Cancel;
 		private Frame frame;
 		
@@ -649,6 +657,8 @@ public final class GUI implements KeyListener//, FrameListener
 			keyB = GUI.keyB;
 			keySTART = GUI.keySTART;
 			keySELECT = GUI.keySELECT;
+			keySAVE = GUI.keySAVE;
+			keyLOAD = GUI.keyLOAD;
 			
 			leftL = new Label("Left");
 			rightL = new Label("Right");
@@ -658,6 +668,8 @@ public final class GUI implements KeyListener//, FrameListener
 			bL = new Label("B");
 			startL = new Label("Start");
 			selectL = new Label("Select");
+			saveL = new Label("Save");
+			loadL = new Label("Load");
 			
 			leftT = new TextField(KeyEvent.getKeyText(keyLEFT), 5);
 			leftT.addKeyListener(this);
@@ -683,6 +695,12 @@ public final class GUI implements KeyListener//, FrameListener
 			selectT = new TextField(KeyEvent.getKeyText(keySELECT), 5);
 			selectT.addKeyListener(this);
 			selectT.setEditable(false);
+			saveT = new TextField(KeyEvent.getKeyText(keySAVE), 5);
+			saveT.addKeyListener(this);
+			saveT.setEditable(false);
+			loadT = new TextField(KeyEvent.getKeyText(keyLOAD), 5);
+			loadT.addKeyListener(this);
+			loadT.setEditable(false);
 			
 			OK = new Button("OK");
 			OK.setActionCommand("OK");
@@ -691,10 +709,10 @@ public final class GUI implements KeyListener//, FrameListener
 			Cancel.setActionCommand("Cancel");
 			Cancel.addActionListener(this);
 			
-			frame.setSize(250, 260);
+			frame.setSize(250, 280);
 		   frame.setLocation(400, 200);
 			
-			layout = new GridLayout(9, 2, 10, 5);
+			layout = new GridLayout(11, 2, 10, 5);
 			frame.setLayout(layout);
 			
 			frame.add(leftL);
@@ -713,6 +731,10 @@ public final class GUI implements KeyListener//, FrameListener
 			frame.add(startT);
 			frame.add(selectL);
 			frame.add(selectT);
+			frame.add(saveL);
+			frame.add(saveT);
+			frame.add(loadL);
+			frame.add(loadT);
 			frame.add(OK);
 			frame.add(Cancel);
 			
@@ -738,6 +760,8 @@ public final class GUI implements KeyListener//, FrameListener
 				GUI.keyB = keyB;
 				GUI.keySTART = keySTART;
 				GUI.keySELECT = keySELECT;
+				GUI.keySAVE = keySAVE;
+				GUI.keyLOAD = keyLOAD;
 				//System.out.println("Controls -- Up: " + GUI.keyUP + "  Down: " + GUI.keyDOWN + " Left: " + GUI.keyLEFT + " Right: " + GUI.keyRIGHT
 				  //  + " A: " + GUI.keyA + " B: " + GUI.keyB + "  START: " + GUI.keySTART + "  SELECT: " + GUI.keySELECT);
 			   frame.dispose();
@@ -794,6 +818,16 @@ public final class GUI implements KeyListener//, FrameListener
 			{
 			   keySELECT = e.getKeyCode();
 				selectT.setText(KeyEvent.getKeyText(keySELECT));
+			}
+		   if(e.getComponent() == saveT)
+			{
+			   keySAVE = e.getKeyCode();
+				saveT.setText(KeyEvent.getKeyText(keySAVE));
+			}
+		   if(e.getComponent() == loadT)
+			{
+			   keyLOAD = e.getKeyCode();
+			   loadT.setText(KeyEvent.getKeyText(keyLOAD));
 			}
 		}
 	}
