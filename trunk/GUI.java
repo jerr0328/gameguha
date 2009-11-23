@@ -605,7 +605,6 @@ public final class GUI implements KeyListener//, FrameListener
 		}
 	}
 	
-	// // This is broken: see my ViewMenu for a correct example of handling CheckBoxMenuItems
 	private class SoundMenu extends Menu implements ItemListener {
 		//Frame mw;
 		private CheckboxMenuItem channel1;
