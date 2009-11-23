@@ -3,6 +3,8 @@
  */
 
 import java.io.*;
+import java.util.*;
+import java.util.zip.*;
 
 public final class ROM{	
 	//public static final int bankSize = 0x4000;
@@ -14,8 +16,57 @@ public final class ROM{
 	private String path;
 	
 	public ROM(String filename){
-		this(new File(filename));
+	   filename.toLowerCase();
+	   if(filename.endsWith(".zip"))
+		{
+	      String unzipped = unZip(filename);
+		   new ROM(new File(unzipped));
+		}
+		else
+		   new ROM(new File(filename));
 	}
+	
+	 public static String unZip (String filename) {
+		   int BUFFER = 2048;
+			
+      try {
+         BufferedOutputStream dest = null;
+         BufferedInputStream is = null;
+         ZipEntry entry;
+         ZipFile zipfile = new ZipFile(filename);
+         Enumeration e = zipfile.entries();
+			String newfile;
+			while(e.hasMoreElements()) {
+            entry = (ZipEntry) e.nextElement();
+				newfile = entry.getName();
+				if(newfile.endsWith(".gb") || newfile.endsWith(".gbc")){
+               System.out.println("Extracting: " +entry);
+               is = new BufferedInputStream
+                 (zipfile.getInputStream(entry));
+               int count;
+               byte data[] = new byte[BUFFER];
+               FileOutputStream fos = new 
+                 FileOutputStream(entry.getName());
+				
+				   System.out.println(newfile);
+               dest = new 
+                  BufferedOutputStream(fos, BUFFER);
+               while ((count = is.read(data, 0, BUFFER)) 
+                 != -1) {
+                  dest.write(data, 0, count);
+               }
+               dest.flush();
+               dest.close();
+               is.close();
+				   return newfile;
+				}
+			}
+         
+	      } catch(Exception e) {
+         e.printStackTrace();
+      }
+		return "This didn't work";
+   }
 	
 	public ROM(File file){
 		path = file.getPath();
