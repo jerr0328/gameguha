@@ -697,8 +697,6 @@ public void setSoundEnable(boolean soundEnabled)
 	for(;;)
 	{
 		synchronized (this) {
-			if (soundEnabled) {
-		
 				try
 				{
 					sem.acquire();
@@ -708,6 +706,7 @@ public void setSoundEnable(boolean soundEnabled)
 					e.printStackTrace();
 				}
 		
+			if (soundEnabled) {
 				int numSamples;
 
 				if (sampleRate / 28 >= soundLine.available() * 2) {

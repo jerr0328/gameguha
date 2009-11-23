@@ -4563,8 +4563,9 @@ public final class CPU extends Thread
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT3);
 							}
 						}
-								
-								gui.genSound();
+						
+						if(snd.soundEnabled)						
+							gui.genSound();
 						
 						// Draw current scanline
 						if (scanline < GUI.screenHeight)
