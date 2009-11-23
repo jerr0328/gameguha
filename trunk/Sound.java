@@ -696,35 +696,36 @@ public void setSoundEnable(boolean soundEnabled)
 	
 	for(;;)
 	{
-	  if (soundEnabled) {
+		synchronized (this) {
+			if (soundEnabled) {
 		
-		try
-		{
-			sem.acquire();
-		}
-		catch(Throwable e)
-		{
-			e.printStackTrace();
-		}
+				try
+				{
+					sem.acquire();
+				}
+				catch(Throwable e)
+				{
+					e.printStackTrace();
+				}
 		
-	   int numSamples;
+				int numSamples;
 
-	   if (sampleRate / 28 >= soundLine.available() * 2) {
-	    numSamples = soundLine.available() * 2;
-	   } else {
-	    numSamples = (sampleRate / 28) & 0xFFFE;
-	   }
+				if (sampleRate / 28 >= soundLine.available() * 2) {
+					numSamples = soundLine.available() * 2;
+				} else {
+					numSamples = (sampleRate / 28) & 0xFFFE;
+				}
 
-	   byte[] b = new byte[numSamples];
-	   if (channel1Enable) channel1.play(b, numSamples / 2, 0);
-	   if (channel2Enable) channel2.play(b, numSamples / 2, 0);
-	   if (channel3Enable) channel3.play(b, numSamples / 2, 0);
-	   if (channel4Enable) channel4.play(b, numSamples / 2, 0);
-	   soundLine.write(b, 0, numSamples);
-
-	  	}
+				byte[] b = new byte[numSamples];
+				if (channel1Enable) channel1.play(b, numSamples / 2, 0);
+				if (channel2Enable) channel2.play(b, numSamples / 2, 0);
+				if (channel3Enable) channel3.play(b, numSamples / 2, 0);
+				if (channel4Enable) channel4.play(b, numSamples / 2, 0);
+				soundLine.write(b, 0, numSamples);
+				}
+			}
+		}
 	}
- }
 }
 
 
