@@ -24,6 +24,7 @@ public final class CPU extends Thread
 	
 	private static final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
 
+	private static byte sVal;
 	private static ROM rom;
 	private static GUI gui;
 	private static Sound snd;
@@ -454,21 +455,26 @@ public final class CPU extends Thread
 					case 0xFF0F:
 						return (mem[7][0x1F0F] = (val & 0x1F));
 					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
-						snd.channel2.setSoundLength(val & ~(BIT6 | BIT7));
-						snd.channel2.setWavePatternDuty((val & (BIT6 | BIT7) >> 6));
-						return (mem[7][0x1F16] = (val & (BIT6 | BIT7)));
+						sVal = (byte)val;
+						snd.channel2.setSoundLength(sVal & ~(BIT6 | BIT7));
+						snd.channel2.setWavePatternDuty((sVal & (BIT6 | BIT7) >> 6));
+						return (mem[7][0x1F16] = (sVal & (BIT6 | BIT7)));
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
+						sVal = (byte)val;
+						System.out.println("val is "+sVal);
 						snd.channel2.setVolumeEnvelope(
-						((val & (BIT7|BIT6|BIT5|BIT4) ) >> 4),(val & (BIT2|BIT1|BIT0)),(val & BIT3));
-						return val;
+						((sVal & 0xF0 ) >> 4),(sVal & 0x07),(sVal & 0x08));
+						return sVal;
 					case 0xFF18: // Channel 2 Frequency Lo (W)
-						snd.channel2.setFrequencyLo(val);
-						return val;
+						sVal = (byte)val;
+						snd.channel2.setFrequencyLo(sVal);
+						return sVal;
 					case 0xFF19: // Channel 2 Frequency Hi (R/W)
-						snd.channel2.setSoundLength(val & BIT7);
-						snd.channel2.setCounter(val & BIT6);
-						snd.channel2.setFrequencyHi(val & (BIT2|BIT1|BIT0));
-						if((val & BIT7) == -1)
+						sVal = (byte)val;
+						snd.channel2.setSoundLength(sVal & BIT7);
+						snd.channel2.setCounter(sVal & BIT6);
+						snd.channel2.setFrequencyHi(sVal & (BIT2|BIT1|BIT0));
+						if((sVal & BIT7) == -1)
 							snd.channel2.setSoundLength(-1);
 						
 						return (mem[7][0x1F19] = (val & BIT6));
