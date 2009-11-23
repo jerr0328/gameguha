@@ -470,10 +470,12 @@ public final class CPU extends Thread
 							snd.channel1.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) != 0));
 						return(mem[7][0x1F12] = val);
 					case 0xFF13: // Channel 1 Frequency Lo (W)
+						mem[7][0x1F13] = val;
 						if(snd.soundEnabled)
 							snd.channel1.setFrequency((((mem[7][0x1F14]) & 0x07) << 8) + mem[7][0x1F13]);
 						return (mem[7][0x1F13] = val);
 					case 0xFF14: // Channel 1 Frequency Hi (R/W)
+						mem[7][0x1F14] = val;
 						if(snd.soundEnabled)
 						{
 							if((mem[7][0x1F14] & 0x80) != 0)
@@ -496,15 +498,18 @@ public final class CPU extends Thread
 						}
 						return (mem[7][0x1F16] = val);
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
+						mem[7][0x1F17] = val;
 						if(snd.soundEnabled)
 							snd.channel2.setEnvelope(
 							((val & 0xF0 ) >> 4),(val & 0x07),((val & 0x08) != 0));
 						return (mem[7][0x1F17] = val);
 					case 0xFF18: // Channel 2 Frequency Lo (W)
+						mem[7][0x1F18] = val;
 						if(snd.soundEnabled)
 							snd.channel2.setFrequency((((mem[7][0x1F19]) & 0x07) << 8) + mem[7][0x1F18]);
 						return (mem[7][0x1F18] = val);
 					case 0xFF19: // Channel 2 Frequency Hi (R/W)
+						mem[7][0x1F19] = val;
 						if(snd.soundEnabled)
 						{
 							if((mem[7][0x1F19] & 0x80) != 0)
@@ -536,11 +541,11 @@ public final class CPU extends Thread
 						return(mem[7][0x1F1B] = val);
 					case 0xFF1C:
 						if(snd.soundEnabled)
-							snd.channel3.setVolume((mem[7][0x1F1C] & 0x60) >> 5);
+							snd.channel3.setVolume((val & 0x60) >> 5);
 						return(mem[7][0x1F1C] = val);
 					case 0XFF1D:
 						if(snd.soundEnabled)
-							snd.channel3.setFrequency(((mem[7][0x1F1E] & 0x07) << 8) + mem[7][0x1F1D]);
+							snd.channel3.setFrequency(((mem[7][0x1F1E] & 0x07) << 8) + val);
 						return(mem[7][0x1F1D] = val);
 					case 0xFF1E:
 						if(snd.soundEnabled)
@@ -571,7 +576,7 @@ public final class CPU extends Thread
 							{
 								snd.channel4.setLength(mem[7][0x1F20] & 0x3F);
 							}
-							if((mem[7][0x1F23] & 0x40) == 0)
+							if((val & 0x40) == 0)
 								snd.channel4.setLength(-1);
 						}
 						return(mem[7][0x1F23] = val);
