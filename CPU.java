@@ -24,7 +24,7 @@ public final class CPU extends Thread
 	
 	private static final int[] color = {0xFFFFFFFF, 0xFFC0C0C0, 0xFF404040, 0xFF000000}; // WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
 
-	private static byte sVal;
+	private static byte val;
 	private static ROM rom;
 	private static GUI gui;
 	private static Sound snd;
@@ -454,61 +454,154 @@ public final class CPU extends Thread
 						return (mem[7][0x1F07] = val);
 					case 0xFF0F:
 						return (mem[7][0x1F0F] = (val & 0x1F));
-					case 0xFF10: // Channel 1 Sound Sweep
-						sVal = (byte)val;
-						snd.channel1.setSweep(sVal & (BIT6 | BIT5 | BIT4),sVal & BIT3, sVal & (BIT2 | BIT1 | BIT0));
-						return (mem[7][0x1F10] = sVal);
-					case 0xFF11: // Channel 1 Sound Length/Wave Pattern Duty 
-						sVal = (byte)val;
-						snd.channel1.setSoundLength(sVal & ~(BIT6 | BIT7));
-						snd.channel1.setWavePatternDuty((sVal & (BIT6 | BIT7) >> 6));
-						return (mem[7][0x1F16] = (sVal & (BIT6 | BIT7)));
-					case 0xFF12: // Channel 1 Volume Envelope
-						sVal = (byte)val;
-						snd.channel1.setVolumeEnvelope(
-						((sVal & 0xF0 ) >> 4),(sVal & 0x07),(sVal & 0x08));
-						return sVal;
-					case 0xFF13: // Channel 1 Frequency Lo (W)
-						snd.channel1.setFrequencyLo(val);
-						return (mem[7][0x1F14] = val);
-					case 0xFF14: // Channel 1 Frequency Hi (R/W)
-						sVal = (byte)val;
-						snd.channel1.setSoundLength(val & BIT7);
-						snd.channel1.setCounter(val & BIT6);
-						snd.channel1.setFrequencyHi(val & (BIT2|BIT1|BIT0));
-						if((val & BIT7) == -1)
-							snd.channel1.setSoundLength(-1);
+					case 0xFF10:
+						snd.channel1.setSweep(((val & 0x70) >> 4), (val & 0x07), ((val & 0x08) == 1));
+						return(mem[7][0x1F10] = val);
+					case 0xFF11:
+						snd.channel1.setDutyCycle((val & 0xC0) >> 6);
+						snd.channel1.setLength(val & 0x3F);
+						return(mem[7][0x1F11]=val);
+					case 0xFF12:
+						snd.channel1.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) == 8));
+						return(mem[7][0x1F12] = val);
+					case 0xFF13: // Channel 2 Frequency Lo (W)
+						snd.channel1.setFrequency( ( ( (int)(mem[7][0x1F14]) &0x07) <<8) + mem[7][0x1F13]);
+						return (mem[7][0x1F13] = val);
+					case 0xFF14: // Channel 2 Frequency Hi (R/W)
+						if((mem[7][0x1F14] & 0x80) != 0)
+						{
+							snd.channel1.setLength(mem[7][0x1F11] & 0x3F);
+							snd.channel1.setEnvelope((mem[7][0x1F12] & 0xF0) >>4, (mem[7][0x1F12] & 0x07), ((mem[7][0x1F12] & 0x08) == 8));
+						}
+						if((mem[7][0x1F14] & 0x40) == 0)
+						{
+							snd.channel1.setLength(-1);
+						}
+							snd.channel1.setFrequency( ((int)(mem[7][0x1F14] & 0x07) <<8) + mem[7][0x1F13]);
 
-						return (mem[7][0x1F14] = (val & BIT6));
+					return (mem[7][0x1F14] = val);
 					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
-						sVal = (byte)val;
-						snd.channel2.setSoundLength(sVal & ~(BIT6 | BIT7));
-						snd.channel2.setWavePatternDuty((sVal & (BIT6 | BIT7) >> 6));
-						return (mem[7][0x1F16] = (sVal & (BIT6 | BIT7)));
+						snd.channel2.setLength(val & 0x3F);
+						snd.channel2.setDutyCycle((val & 0xC0) >> 6);
+						return (mem[7][0x1F16] = val);
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
-						sVal = (byte)val;
-						snd.channel2.setVolumeEnvelope(
-						((sVal & 0xF0 ) >> 4),(sVal & 0x07),(sVal & 0x08));
-						return (mem[7][0x1F17] = sVal);
+						snd.channel2.setEnvelope(
+						((val & 0xF0 ) >> 4),(val & 0x07),((val & 0x08) == 8));
+						return (mem[7][0x1F17] = val);
 					case 0xFF18: // Channel 2 Frequency Lo (W)
 						snd.channel2.setFrequency( ( ( (int)(mem[7][0x1F19]) &0x07) <<8) + mem[7][0x1F18]);
 						return (mem[7][0x1F18] = val);
 					case 0xFF19: // Channel 2 Frequency Hi (R/W)
-						sVal = (byte)val;
 						if((mem[7][0x1F19] & 0x80) != 0)
 						{
-							snd.channel2.setSoundLength(mem[7][0x1F21] & 0x3F);
-							snd.channel2.setVolumeEnvelope((mem[7][0x1F17] & 0xF0) >>4, (mem[7][0x1F17] & 0x07), (mem[7][0x1F17] & 0x08));
+							snd.channel2.setLength(mem[7][0x1F21] & 0x3F);
+							snd.channel2.setEnvelope((mem[7][0x1F17] & 0xF0) >>4, (mem[7][0x1F17] & 0x07), ((mem[7][0x1F17] & 0x08) == 8));
 						}
 						if((mem[7][0x1F19] & 0x40) == 0)
 						{
-							snd.channel2.setSoundLength(-1);
+							snd.channel2.setLength(-1);
 						}
 							snd.channel2.setFrequency( ((int)(mem[7][0x1F19] & 0x07) <<8) + mem[7][0x1F18]);
 						
-						return (mem[7][0x1F19] = (val & BIT6));
+						return (mem[7][0x1F19] = val);
+					case 0xFF1A:
+						if((val & 0x80) !=0)
+						{
+							snd.channel3.setVolume((mem[7][0x1F1C] & 0x60) >> 5);
+						}
+						else
+							snd.channel3.setVolume(0);
+					
+						return(mem[7][0x1F1A] = val);
+					case 0xFF1B:
+						snd.channel3.setLength(val);
+						return(mem[7][0x1F1B] = val);
+					case 0xFF1C:
+						snd.channel3.setVolume((mem[7][0x1F1C] & 0x60) >>5);
+						return(mem[7][0x1F1C] = val);
+					case 0XFF1D:
+						snd.channel3.setFrequency(((mem[7][0x1F1E] & 0x07) << 8) + mem[7][0x1F1D]);
+						return(mem[7][0x1F1D] = val);
+					case 0xFF1E:
+						if((mem[7][0x1F19] &0x80) !=0)
+						{
+							snd.channel3.setLength(mem[7][0x1F1B]);
+						}
+						snd.channel3.setFrequency(((mem[7][0x1F1E] & 0x07) << 8) + mem[7][0x1F1D]);
+						return(mem[7][0x1F1E] = val);
+					case 0xFF20:
+						snd.channel4.setLength(val & 0x3F);
+						return(mem[7][0x1F20] = val);
 					case 0xFF21: //Channel 4 Volume Envelope
+						snd.channel4.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) == 8));
 						return (mem[7][0x1F21] = val);
+					case 0xFF22:
+						snd.channel4.setParameters((val & 0x07),((val &0x08) == 8),((val & 0xF0) >> 4));
+						return(mem[7][0x1F22] = val);
+					case 0xFF23:
+						if((mem[7][0x1F23] & 0x80) != 0)
+						{
+							snd.channel4.setLength(mem[7][0x1F20] & 0x3F);
+						}
+						if((mem[7][0x1F23] & 0x40) == 0)
+							snd.channel4.setLength(-1);
+						return(mem[7][0x1F23] = val);
+					case 0xFF25: // Stereo select
+						int chanData;
+						
+						chanData = 0;
+						if((val & 0x01) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_LEFT;
+						}
+						if((val & 0x10) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_RIGHT;
+						}
+						snd.channel1.setChannel(chanData);
+						
+						chanData = 0;
+						if((val & 0x02) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_LEFT;
+						}
+						if((val & 0x20) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_RIGHT;
+						}
+						snd.channel2.setChannel(chanData);
+						
+						chanData = 0;
+						if((val & 0x04) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_LEFT;
+						}
+						if((val & 0x40) !=0)
+						{
+							chanData |= SquareWaveGenerator.CHAN_RIGHT;
+						}
+						snd.channel3.setChannel(chanData);
+					
+					return(mem[7][0x1F25] = val);
+					
+					case 0xFF30:
+					case 0xFF31:
+					case 0xFF32:
+					case 0xFF33:
+					case 0xFF34:
+					case 0xFF35:
+					case 0xFF36:
+					case 0xFF37:
+					case 0xFF38:
+					case 0xFF39:
+					case 0xFF3A:
+					case 0xFF3B:
+					case 0xFF3C:
+					case 0xFF3D:
+					case 0xFF3E:
+					case 0xFF3F:
+						snd.channel3.setSamplePair(index - 0xFF30, val);
+						return(mem[7][index - 0xFF00] = val);
 					case 0xFF40:
 						return (mem[7][0x1F40] = val);
 					case 0xFF41:
@@ -4691,6 +4784,7 @@ public final class CPU extends Thread
 							if ((HRAM[0x1F40] & BIT1) == 0)
 								spritesOff[scanline] = true;
 						}
+													
 						else if (scanline == GUI.screenHeight)
 						{
 							// Draw sprites now
