@@ -699,13 +699,13 @@ public final class CPU extends Thread
 		    			ROM.writeInt(out,nextHBlank);
 		    			
 		    			for(int i: colorBG){
-		    				out.write(i);
+		    				ROM.writeInt(out,i);
 		    			}
 		    			for(int i: colorSP0){
-		    				out.write(i);
+		    				ROM.writeInt(out,i);
 		    			}
 		    			for(int i: colorSP1){
-		    				out.write(i);
+		    				ROM.writeInt(out,i);
 		    			}
 
 		    			/*
@@ -812,11 +812,11 @@ public final class CPU extends Thread
 		    			}
 		    			*/
 		    			for(int i=0; i< 4; i++)
-		    				colorBG[i]=buf.read();
+		    				colorBG[i]=ROM.readInt(buf);
 		    			for(int i=0; i< 4; i++)
-		    				colorSP0[i]=buf.read();
+		    				colorSP0[i]=ROM.readInt(buf);
 		    			for(int i=0; i< 4; i++)
-		    				colorSP1[i]=buf.read();
+		    				colorSP1[i]=ROM.readInt(buf);
 		    			for(int i=0; i< VRAM.length; i++)
 		    				VRAM[i]=buf.read();
 		    			for(int i=0; i< HRAM.length; i++)
