@@ -602,6 +602,32 @@ class Sound extends Thread {
  int bufferLengthMsec = 200;
 
  /** Initialize sound emulation, and allocate sound hardware */
+ public void setChan1(boolean channel1Enable)
+{
+	this.channel1Enable = channel1Enable;
+}
+
+
+public void setChan2(boolean channel2Enable)
+{
+	this.channel2Enable = channel2Enable;
+}
+
+public void setChan3(boolean channel3Enable)
+{
+	this.channel3Enable = channel3Enable;
+}
+
+public void setChan4(boolean channel4Enable)
+{
+	this.channel4Enable = channel4Enable;
+}
+
+public void setSoundEnable(boolean soundEnabled)
+{
+	this.soundEnabled = soundEnabled;
+}
+
  public Sound(Semaphore sem) {
 	this.sem = sem;
   soundLine = initSoundHardware();
