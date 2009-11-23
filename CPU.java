@@ -456,7 +456,7 @@ public final class CPU extends Thread
 						return (mem[7][0x1F0F] = (val & 0x1F));
 					case 0xFF10:
 						if(snd.soundEnabled) 
-							snd.channel1.setSweep(((val & 0x70) >> 4), (val & 0x07), ((val & 0x08) == 1));
+							snd.channel1.setSweep(((val & 0x70) >> 4), (val & 0x07), ((val & 0x08) != 0));
 						return(mem[7][0x1F10] = val);
 					case 0xFF11:
 						if(snd.soundEnabled)
@@ -467,25 +467,25 @@ public final class CPU extends Thread
 						return(mem[7][0x1F11]=val);
 					case 0xFF12:
 						if(snd.soundEnabled) 
-							snd.channel1.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) == 8));
+							snd.channel1.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) != 0));
 						return(mem[7][0x1F12] = val);
-					case 0xFF13: // Channel 2 Frequency Lo (W)
+					case 0xFF13: // Channel 1 Frequency Lo (W)
 						if(snd.soundEnabled)
-							snd.channel1.setFrequency( ( ( (int)(mem[7][0x1F14]) &0x07) <<8) + mem[7][0x1F13]);
+							snd.channel1.setFrequency((((mem[7][0x1F14]) & 0x07) << 8) + mem[7][0x1F13]);
 						return (mem[7][0x1F13] = val);
-					case 0xFF14: // Channel 2 Frequency Hi (R/W)
+					case 0xFF14: // Channel 1 Frequency Hi (R/W)
 						if(snd.soundEnabled)
 						{
 							if((mem[7][0x1F14] & 0x80) != 0)
 							{
 								snd.channel1.setLength(mem[7][0x1F11] & 0x3F);
-								snd.channel1.setEnvelope((mem[7][0x1F12] & 0xF0) >>4, (mem[7][0x1F12] & 0x07), ((mem[7][0x1F12] & 0x08) == 8));
+								snd.channel1.setEnvelope((mem[7][0x1F12] & 0xF0) >> 4, (mem[7][0x1F12] & 0x07), ((mem[7][0x1F12] & 0x08) != 0));
 							}
 							if((mem[7][0x1F14] & 0x40) == 0)
 							{
 								snd.channel1.setLength(-1);
 							}
-								snd.channel1.setFrequency( ((int)(mem[7][0x1F14] & 0x07) <<8) + mem[7][0x1F13]);
+								snd.channel1.setFrequency(((mem[7][0x1F14] & 0x07) << 8) + mem[7][0x1F13]);
 						}
 					return (mem[7][0x1F14] = val);
 					case 0xFF16: // Channel 2 Sound Length/Wave Pattern Duty (W)
@@ -498,11 +498,11 @@ public final class CPU extends Thread
 					case 0xFF17: // Channel 2 Volume Envelope (R/W)
 						if(snd.soundEnabled)
 							snd.channel2.setEnvelope(
-							((val & 0xF0 ) >> 4),(val & 0x07),((val & 0x08) == 8));
+							((val & 0xF0 ) >> 4),(val & 0x07),((val & 0x08) != 0));
 						return (mem[7][0x1F17] = val);
 					case 0xFF18: // Channel 2 Frequency Lo (W)
 						if(snd.soundEnabled)
-							snd.channel2.setFrequency( ( ( (int)(mem[7][0x1F19]) &0x07) <<8) + mem[7][0x1F18]);
+							snd.channel2.setFrequency((((mem[7][0x1F19]) & 0x07) << 8) + mem[7][0x1F18]);
 						return (mem[7][0x1F18] = val);
 					case 0xFF19: // Channel 2 Frequency Hi (R/W)
 						if(snd.soundEnabled)
@@ -510,13 +510,13 @@ public final class CPU extends Thread
 							if((mem[7][0x1F19] & 0x80) != 0)
 							{
 								snd.channel2.setLength(mem[7][0x1F21] & 0x3F);
-								snd.channel2.setEnvelope((mem[7][0x1F17] & 0xF0) >>4, (mem[7][0x1F17] & 0x07), ((mem[7][0x1F17] & 0x08) == 8));
+								snd.channel2.setEnvelope((mem[7][0x1F17] & 0xF0) >> 4, (mem[7][0x1F17] & 0x07), ((mem[7][0x1F17] & 0x08) != 0));
 							}
 							if((mem[7][0x1F19] & 0x40) == 0)
 							{
 								snd.channel2.setLength(-1);
 							}
-								snd.channel2.setFrequency( ((int)(mem[7][0x1F19] & 0x07) <<8) + mem[7][0x1F18]);
+								snd.channel2.setFrequency(((mem[7][0x1F19] & 0x07) << 8) + mem[7][0x1F18]);
 						}
 						return (mem[7][0x1F19] = val);
 					case 0xFF1A:
@@ -536,7 +536,7 @@ public final class CPU extends Thread
 						return(mem[7][0x1F1B] = val);
 					case 0xFF1C:
 						if(snd.soundEnabled)
-							snd.channel3.setVolume((mem[7][0x1F1C] & 0x60) >>5);
+							snd.channel3.setVolume((mem[7][0x1F1C] & 0x60) >> 5);
 						return(mem[7][0x1F1C] = val);
 					case 0XFF1D:
 						if(snd.soundEnabled)
@@ -558,11 +558,11 @@ public final class CPU extends Thread
 						return(mem[7][0x1F20] = val);
 					case 0xFF21: //Channel 4 Volume Envelope
 						if(snd.soundEnabled)
-							snd.channel4.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) == 8));
+							snd.channel4.setEnvelope(((val & 0xF0) >> 4),(val & 0x07),((val & 0x08) != 0));
 						return (mem[7][0x1F21] = val);
 					case 0xFF22:
 						if(snd.soundEnabled)
-							snd.channel4.setParameters((val & 0x07),((val &0x08) == 8),((val & 0xF0) >> 4));
+							snd.channel4.setParameters((val & 0x07),((val &0x08) != 0),((val & 0xF0) >> 4));
 						return(mem[7][0x1F22] = val);
 					case 0xFF23:
 						if(snd.soundEnabled)
@@ -633,7 +633,7 @@ public final class CPU extends Thread
 					case 0xFF3F:
 						if(snd.soundEnabled)
 							snd.channel3.setSamplePair(index - 0xFF30, val);
-						return(mem[7][index - 0xFF00] = val);
+						return(mem[7][index & 0x1FFF] = val);
 					case 0xFF40:
 						return (mem[7][0x1F40] = val);
 					case 0xFF41:
