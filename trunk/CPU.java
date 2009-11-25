@@ -75,6 +75,16 @@ public final class CPU extends Thread
 		return rom.getTitle();
 	}
 	
+	static public short unsign(int b)
+	{
+		if(b < 0)
+		{
+			return (short) (256 + b);
+		}
+		else
+			return (short)b;
+	}
+	
 	public void setSound(Sound snd)
 	{
 		this.snd = snd;

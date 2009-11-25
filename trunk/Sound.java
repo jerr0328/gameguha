@@ -601,6 +601,9 @@ class Sound extends Thread {
  /** Amount of sound data to buffer before playback */
  int bufferLengthMsec = 200;
 
+ FloatControl volControl = null;
+
+
  /** Initialize sound emulation, and allocate sound hardware */
  public void setChan1(boolean channel1Enable)
 {
@@ -628,9 +631,18 @@ public void setSoundEnable(boolean soundEnabled)
 	this.soundEnabled = soundEnabled;
 }
 
+public float getVolume()
+{
+	return (volControl.getValue());
+}
+
  public Sound(Semaphore sem) {
 	this.sem = sem;
   soundLine = initSoundHardware();
+
+	if(soundEnabled)
+		volControl = (FloatControl) soundLine.getControl(FloatControl.Type.MASTER_GAIN);
+
   channel1 = new SquareWaveGenerator(sampleRate);
   channel2 = new SquareWaveGenerator(sampleRate);
   channel3 = new VoluntaryWaveGenerator(sampleRate);
@@ -650,7 +662,7 @@ public void setSoundEnable(boolean soundEnabled)
     soundEnabled = false;
    } else {
     SourceDataLine line = (SourceDataLine) AudioSystem.getLine(lineInfo);
-
+	
     int bufferLength = (sampleRate / 1000) * bufferLengthMsec;
     line.open(format, bufferLength);
     line.start();
@@ -674,12 +686,34 @@ public void setSoundEnable(boolean soundEnabled)
   soundLine.close();
 
   soundLine = initSoundHardware();
-
+	
   channel1.setSampleRate(sr);
   channel2.setSampleRate(sr);
   channel3.setSampleRate(sr);
   channel4.setSampleRate(sr);
  }
+
+ /** Change the sound volume **/
+ public void setVolume(double gain)
+{
+	// Now we need to convert to decibels...
+	
+	gain /= 100; // dB is lograthmic
+	float dB = (float) (Math.log(gain == 0.0 ? 0.0001 : gain) / Math.log(10.0)*20.0);
+	
+	//Now we set the level
+	volControl.setValue(dB);
+}
+
+public float getMaxVol()
+{
+	return (volControl.getMaximum());
+}
+
+public float getMinVol()
+{
+	return (volControl.getMinimum());
+}
 
  /** Change the sound buffer length */
  public void setBufferLength(int time) {

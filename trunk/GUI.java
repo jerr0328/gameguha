@@ -26,6 +26,7 @@ public final class GUI implements KeyListener//, FrameListener
 	private static Point prevCoord;
 	private static ScreenRenderer render;
 	private static int filter;
+	private static float currentVolume;
 	private static boolean fullScreen = false;
 	private static boolean buttonLEFT = false;
 	private static boolean buttonRIGHT = false;
@@ -47,6 +48,8 @@ public final class GUI implements KeyListener//, FrameListener
 	private static int keyTHROTTLE = KeyEvent.VK_BACK_QUOTE;
 	private static int keySAVE = KeyEvent.VK_F1;
 	private static int keyLOAD = KeyEvent.VK_F2;
+	private static int keyVOLDOWN = KeyEvent.VK_MINUS;
+	private static int keyVOLUP = KeyEvent.VK_EQUALS;
 	
 	public static void main(String[] args)
 	{
@@ -98,6 +101,12 @@ public final class GUI implements KeyListener//, FrameListener
 		sndSem = new Semaphore(0);
 		snd = new Sound(sndSem);
 		snd.start();
+		if(snd.soundEnabled)
+		{
+			currentVolume = 80;
+			snd.setVolume(currentVolume);
+		}
+			
 		
 	}
 	
@@ -264,6 +273,30 @@ public final class GUI implements KeyListener//, FrameListener
 		{
 		   buttonTHROTTLE = true;
 		}
+		
+		else if(key.getKeyCode() == keyVOLDOWN)
+		{
+			if(snd.soundEnabled)
+			{
+				if(snd.getVolume() > snd.getMinVol())
+				{
+					currentVolume-= 5;
+					snd.setVolume( currentVolume );
+				}
+			}
+		}
+		
+		else if(key.getKeyCode() == keyVOLUP)
+		{
+			if(snd.soundEnabled)
+			{
+				if(snd.getVolume() < snd.getMaxVol())
+				{
+					currentVolume += 5;
+					snd.setVolume( currentVolume );
+				}
+			}
+		}
 	}
 	
 	public void keyReleased(KeyEvent key)
@@ -300,6 +333,7 @@ public final class GUI implements KeyListener//, FrameListener
 	   
 		else if(key.getKeyCode() == keyLOAD)
 			cpu.setLoadState(true);
+		
 		
 	}
 	
@@ -655,9 +689,9 @@ public final class GUI implements KeyListener//, FrameListener
 	}
 	
    public class Controls  implements ActionListener, KeyListener {
-	   public int keyLEFT, keyRIGHT, keyUP, keyDOWN, keyA, keyB, keySTART, keySELECT, keySAVE, keyLOAD;
-		private Label leftL, rightL, upL, downL, aL, bL, startL, selectL, saveL, loadL;
-		private TextField leftT, rightT, upT, downT, aT, bT, startT, selectT, saveT, loadT;
+	   public int keyLEFT, keyRIGHT, keyUP, keyDOWN, keyA, keyB, keySTART, keySELECT, keySAVE, keyLOAD, keyVOLUP, keyVOLDOWN;
+		private Label leftL, rightL, upL, downL, aL, bL, startL, selectL, saveL, loadL, volupL, voldownL;
+		private TextField leftT, rightT, upT, downT, aT, bT, startT, selectT, saveT, loadT, volupT, voldownT;
 		private Button OK, Cancel;
 		private Frame frame;
 		
@@ -676,6 +710,8 @@ public final class GUI implements KeyListener//, FrameListener
 			keySELECT = GUI.keySELECT;
 			keySAVE = GUI.keySAVE;
 			keyLOAD = GUI.keyLOAD;
+			keyVOLUP = GUI.keyVOLUP;
+			keyVOLDOWN = GUI.keyVOLDOWN;
 			
 			leftL = new Label("Left");
 			rightL = new Label("Right");
@@ -687,6 +723,8 @@ public final class GUI implements KeyListener//, FrameListener
 			selectL = new Label("Select");
 			saveL = new Label("Save");
 			loadL = new Label("Load");
+			volupL = new Label("Vol +");
+			voldownL = new Label("Vol -");
 			
 			leftT = new TextField(KeyEvent.getKeyText(keyLEFT), 5);
 			leftT.addKeyListener(this);
@@ -718,6 +756,12 @@ public final class GUI implements KeyListener//, FrameListener
 			loadT = new TextField(KeyEvent.getKeyText(keyLOAD), 5);
 			loadT.addKeyListener(this);
 			loadT.setEditable(false);
+			volupT = new TextField(KeyEvent.getKeyText(keyVOLUP), 5);
+			volupT.addKeyListener(this);
+			volupT.setEditable(false);
+			voldownT = new TextField(KeyEvent.getKeyText(keyVOLDOWN), 5);
+			voldownT.addKeyListener(this);
+			voldownT.setEditable(false);
 			
 			OK = new Button("OK");
 			OK.setActionCommand("OK");
@@ -729,7 +773,7 @@ public final class GUI implements KeyListener//, FrameListener
 			frame.setSize(250, 280);
 		   frame.setLocation(400, 200);
 			
-			layout = new GridLayout(11, 2, 10, 5);
+			layout = new GridLayout(13, 2, 10, 5);
 			frame.setLayout(layout);
 			
 			frame.add(leftL);
@@ -752,6 +796,10 @@ public final class GUI implements KeyListener//, FrameListener
 			frame.add(saveT);
 			frame.add(loadL);
 			frame.add(loadT);
+			frame.add(volupL);
+			frame.add(volupT);
+			frame.add(voldownL);
+			frame.add(voldownT);
 			frame.add(OK);
 			frame.add(Cancel);
 			
@@ -779,6 +827,8 @@ public final class GUI implements KeyListener//, FrameListener
 				GUI.keySELECT = keySELECT;
 				GUI.keySAVE = keySAVE;
 				GUI.keyLOAD = keyLOAD;
+				GUI.keyVOLUP = keyVOLUP;
+				GUI.keyVOLDOWN = keyVOLDOWN;
 				//System.out.println("Controls -- Up: " + GUI.keyUP + "  Down: " + GUI.keyDOWN + " Left: " + GUI.keyLEFT + " Right: " + GUI.keyRIGHT
 				  //  + " A: " + GUI.keyA + " B: " + GUI.keyB + "  START: " + GUI.keySTART + "  SELECT: " + GUI.keySELECT);
 			   frame.dispose();
@@ -846,6 +896,18 @@ public final class GUI implements KeyListener//, FrameListener
 			   keyLOAD = e.getKeyCode();
 			   loadT.setText(KeyEvent.getKeyText(keyLOAD));
 			}
+		  if(e.getComponent() == volupT)
+			{
+		 		keyVOLUP = e.getKeyCode();
+				volupT.setText(KeyEvent.getKeyText(keyVOLUP));
+			}
+		  if(e.getComponent() == voldownT)
+			{
+			  	keyVOLDOWN = e.getKeyCode();
+			  	voldownT.setText(KeyEvent.getKeyText(keyVOLDOWN));
+			}
+				
+			
 		}
 	}
 }
