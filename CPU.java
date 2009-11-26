@@ -3,7 +3,7 @@ import java.util.*;
 
 public final class CPU extends Thread
 {
-	boolean[] visited = new boolean[0x10000];
+	//boolean[] visited = new boolean[0x10000];
 	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
@@ -1288,13 +1288,13 @@ public final class CPU extends Thread
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
-				if (!visited[PC])
+				/*if (!visited[PC])
 				{
 					//System.out.println(Integer.toBinaryString(P1));
 			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
 					System.out.printf("Instruction %02X at %04X\n", readMem(mem, PC), PC);
 			   		visited[PC] = true;
-				}
+				}*/
 			
 				//if (PC > 0x219)
 				/*{
@@ -1304,6 +1304,90 @@ public final class CPU extends Thread
 					System.out.format("Operation 0x%02X 0x%02X at 0x%04X\n",readMem(mem, PC),readMem(mem, PC+1),PC);
 				}*/
 				//if (numCycles > 2000) return;
+				
+				// HANDLE INTERRUPTS HERE		
+				if (IME)
+				{
+					switch (HRAM[0x1FFF] & HRAM[0x1F0F])
+					{
+						case 1: case 3: case 5: case 7: case 9: case 11: case 13: case 15:
+						case 17: case 19: case 21: case 23: case 25: case 27: case 29: case 31:
+							//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
+							HRAM[0x1F0F] &= ~BIT0;
+							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
+							PC = 0x0040;
+						break;
+						
+						case 2: case 6: case 10: case 14: case 18: case 22: case 26: case 30:
+							//System.out.println("Launching LCDC interrupt");
+							HRAM[0x1F0F] &= ~BIT1;
+							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
+							PC = 0x0048;
+						break;
+						
+						case 4: case 12: case 20: case 28:
+							//System.out.println("Launching TIMER interrupt");
+							HRAM[0x1F0F] &= ~BIT2;
+							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
+							PC = 0x0050;
+						break;
+						
+						case 8: case 24:
+							//System.out.println("Launching SERIAL interrupt");
+							HRAM[0x1F0F] &= ~BIT3;
+							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
+							PC = 0x0058;
+						break;
+						
+						case 16:
+							//System.out.println("Launching JOYPAD interrupt");
+							HRAM[0x1F0F] &= ~BIT4;
+							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
+							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
+							PC = 0x0060;
+						break;
+						
+						case 0:
+						break;
+						
+						default: throw new AssertionError("Flag register has extra bits set");
+					}
+				}
+				// DONE HANDLING INTERRUPTS
 				
 				switch(readMem(mem, PC++))
 				{
@@ -4447,108 +4531,6 @@ public final class CPU extends Thread
 					
 					default: throw new AssertionError("Unsupported opcode");
 				}
-				
-				// HANDLE INTERRUPTS HERE		
-				if (IME)
-				{
-					switch (HRAM[0x1FFF] & HRAM[0x1F0F])
-					{
-						case 1: case 3: case 5: case 7: case 9: case 11: case 13: case 15:
-						case 17: case 19: case 21: case 23: case 25: case 27: case 29: case 31:
-							//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
-							HRAM[0x1F0F] &= ~BIT0;
-							IME = false;
-							if (gameHalt)
-							{
-								PC++;
-								gameHalt = false;
-							}
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
-							PC = 0x0040;
-						break;
-						
-						case 2: case 6: case 10: case 14: case 18: case 22: case 26: case 30:
-							//System.out.println("Launching LCDC interrupt");
-							HRAM[0x1F0F] &= ~BIT1;
-							IME = false;
-							if (gameHalt)
-							{
-								PC++;
-								gameHalt = false;
-							}
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
-							PC = 0x0048;
-						break;
-						
-						case 4: case 12: case 20: case 28:
-							//System.out.println("Launching TIMER interrupt");
-							HRAM[0x1F0F] &= ~BIT2;
-							IME = false;
-							if (gameHalt)
-							{
-								PC++;
-								gameHalt = false;
-							}
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
-							PC = 0x0050;
-						break;
-						
-						case 8: case 24:
-							//System.out.println("Launching SERIAL interrupt");
-							HRAM[0x1F0F] &= ~BIT3;
-							IME = false;
-							if (gameHalt)
-							{
-								PC++;
-								gameHalt = false;
-							}
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
-							PC = 0x0058;
-						break;
-						
-						case 16:
-							//System.out.println("Launching JOYPAD interrupt");
-							HRAM[0x1F0F] &= ~BIT4;
-							IME = false;
-							if (gameHalt)
-							{
-								PC++;
-								gameHalt = false;
-							}
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
-							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
-							PC = 0x0060;
-						break;
-						
-						case 0:
-						break;
-						
-						default: throw new AssertionError("Flag register has extra bits set");
-					}
-				}
-				// STOP HANDLING INTERRUPTS
-				
-				//int cyclesUntilScan = ;
-				
-				//if (cyclesUntilScan < 64)
-				//{
-					//if (cyclesUntilScan > 0)
-					//	HRAM[0x1F41] = (HRAM[0x1F41] & 0xFC) | (3 - (HRAM[0x1F41] >> 5));
-					
-					
-					/*if (cyclesUntilScan > 43)
-					{
-						HRAM[0x1F41] |= BIT1;
-						HRAM[0x1F41] &= ~BIT0;
-					}
-					else if (cyclesUntilScan > 0)
-					{
-						HRAM[0x1F41] |= BIT0;
-					}*/
 				
 				switch (nextHBlank-numCycles)
 				{
