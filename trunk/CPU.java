@@ -3,7 +3,7 @@ import java.util.*;
 
 public final class CPU extends Thread
 {
-	//boolean[] visited = new boolean[0x10000];
+	boolean[] visited = new boolean[0x10000];
 	
 	public static final int BIT7 = 1<<7;
  	public static final int BIT6 = 1<<6;
@@ -73,16 +73,6 @@ public final class CPU extends Thread
 	public String toString()
 	{
 		return rom.getTitle();
-	}
-	
-	static public short unsign(int b)
-	{
-		if(b < 0)
-		{
-			return (short) (256 + b);
-		}
-		else
-			return (short)b;
 	}
 	
 	public void setSound(Sound snd)
@@ -706,6 +696,7 @@ public final class CPU extends Thread
 		int HREG=0x01;
 		int LREG=0x4D;
 		boolean IME = false;
+		boolean gameHalt = false;
 		
 		final int[][] mem = new int[8][0x2000];
 		
@@ -1297,13 +1288,13 @@ public final class CPU extends Thread
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
 			{
-				/*if (!visited[PC])
+				if (!visited[PC])
 				{
 					//System.out.println(Integer.toBinaryString(P1));
 			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
 					System.out.printf("Instruction %02X at %04X\n", readMem(mem, PC), PC);
 			   		visited[PC] = true;
-				}*/
+				}
 			
 				//if (PC > 0x219)
 				/*{
@@ -2075,13 +2066,13 @@ public final class CPU extends Thread
 					
 					case 0x76: // HALT
 						if (IME)
+						{
+							PC--;
+							gameHalt = true;
 							numCycles = nextHBlank;
+						}
 						else
 							numCycles++;
-						//if (IME)
-							//*give control to interrupt handler*
-						//else
-							//PC++; (skip next instruction in GB mode)
 					break;
 				
 					case 0x77: // LD (HL),A
@@ -4303,7 +4294,7 @@ public final class CPU extends Thread
 					
 					case 0xE0: //LDH (n),A **WRITE TO ADDRESS N**
 						numCycles+=3;
-						writeMem(mem, 0xFF00 + readMem(mem, PC++), AREG);
+						writeMem(mem, 0xFF00 | readMem(mem, PC++), AREG);
 					break;
 					
 					case 0xE1: // POP HL
@@ -4314,7 +4305,7 @@ public final class CPU extends Thread
 						
 					case 0xE2: //LD (C),A **WRITE TO IO C**
 						numCycles+=2;
-						writeMem(mem, 0xFF00 + CREG, AREG);
+						writeMem(mem, 0xFF00 | CREG, AREG);
 					break;
 					
 					case 0xE5: // PUSH HL
@@ -4373,7 +4364,7 @@ public final class CPU extends Thread
 					
 					case 0xF0: //LDH (n),A **READ FROM ADDRESS N**
 						numCycles+=3;
-						AREG = readMem(mem, 0xFF00 + readMem(mem, PC++));
+						AREG = readMem(mem, 0xFF00 | readMem(mem, PC++));
 					break;
 					
 					case 0xF1: // POP AF
@@ -4384,7 +4375,7 @@ public final class CPU extends Thread
 					
 					case 0xF2: //LD A,(C) **READ FROM IO C**
 						numCycles += 2;
-						AREG = readMem(mem, 0xFF00 + CREG);
+						AREG = readMem(mem, 0xFF00 | CREG);
 					break;
 					
 					case 0xF3: // DI
@@ -4467,6 +4458,11 @@ public final class CPU extends Thread
 							//System.out.printf("Launching VBLANK interrupt, current address %4X\n", PC);
 							HRAM[0x1F0F] &= ~BIT0;
 							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0040;
@@ -4476,6 +4472,11 @@ public final class CPU extends Thread
 							//System.out.println("Launching LCDC interrupt");
 							HRAM[0x1F0F] &= ~BIT1;
 							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0048;
@@ -4485,6 +4486,11 @@ public final class CPU extends Thread
 							//System.out.println("Launching TIMER interrupt");
 							HRAM[0x1F0F] &= ~BIT2;
 							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0050;
@@ -4494,6 +4500,11 @@ public final class CPU extends Thread
 							//System.out.println("Launching SERIAL interrupt");
 							HRAM[0x1F0F] &= ~BIT3;
 							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0058;
@@ -4503,6 +4514,11 @@ public final class CPU extends Thread
 							//System.out.println("Launching JOYPAD interrupt");
 							HRAM[0x1F0F] &= ~BIT4;
 							IME = false;
+							if (gameHalt)
+							{
+								PC++;
+								gameHalt = false;
+							}
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC >> 8);
 							writeMem(mem, SP = (SP-1) & 0xFFFF, PC & 0x00FF);
 							PC = 0x0060;
