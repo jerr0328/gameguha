@@ -32,6 +32,8 @@ public final class CPU extends Thread
 	private static int mbcMode = 0;
 	private static int mbcSig = 0;
 	private static int mbcLower = 1;
+	private static int ROMBank = 0;
+	private static int RAMBank = 0;
 	private static boolean pleaseWait;
 	private static boolean halt;
 	private static boolean saveState;
@@ -185,34 +187,48 @@ public final class CPU extends Thread
 					case 0: break;
 					
 					case 1:
+						int prev = mbcLower;
 						mbcLower = (val & 0x1F);
 						if (mbcLower == 0)
 							mbcLower = 1;
-						int bank = (mbcSig | mbcLower);
-						//System.out.println(Integer.toBinaryString(val) + " out of " + Integer.toBinaryString(rom.numROMBanks));
-						if (bank < rom.numROMBanks)
+						if ((mbcSig | mbcLower) < rom.numROMBanks)
 						{
-							mem[2] = rom.getROM(bank, 0);
-							mem[3] = rom.getROM(bank, 1);
+							ROMBank = (mbcSig | mbcLower);
+							mem[2] = rom.getROM(ROMBank, 0);
+							mem[3] = rom.getROM(ROMBank, 1);
 						}
+						else
+							mbcLower = prev;
 					break;
 					
 					case 2:
 						if ((index & 0x0100) == 0)
 							break;
-						bank = (val & 0x0F);
-						if (bank == 0)
-							bank = 1;
-						mem[2] = rom.getROM(bank, 0);
-						mem[3] = rom.getROM(bank, 1);
+						prev = ROMBank;
+						ROMBank = (val & 0x0F);
+						if (ROMBank == 0)
+							ROMBank = 1;
+						if (ROMBank < rom.numROMBanks)
+						{
+							mem[2] = rom.getROM(ROMBank, 0);
+							mem[3] = rom.getROM(ROMBank, 1);
+						}
+						else
+							ROMBank = prev;
 					break;
 					
 					case 3:
-						bank = (val & 0x7F);
-						if (bank == 0)
-							bank = 1;
-						mem[2] = rom.getROM(bank, 0);
-						mem[3] = rom.getROM(bank, 1);
+						prev = ROMBank;
+						ROMBank = (val & 0x7F);
+						if (ROMBank == 0)
+							ROMBank = 1;
+						if (ROMBank < rom.numROMBanks)
+						{
+							mem[2] = rom.getROM(ROMBank, 0);
+							mem[3] = rom.getROM(ROMBank, 1);
+						}
+						else
+							ROMBank = prev;
 					break;
 					
 					case 5:
@@ -235,22 +251,35 @@ public final class CPU extends Thread
 					case 1:
 						if (mbcMode == 0)
 						{
+							int prev = mbcSig;
 							mbcSig = (val & 0x03) << 5;
-							int bank = (mbcSig | mbcLower);
-							if (bank < rom.numROMBanks)
+							if ((mbcSig | mbcLower) < rom.numROMBanks)
 							{
-								mem[2] = rom.getROM(bank, 0);
-								mem[3] = rom.getROM(bank, 1);
+								ROMBank = (mbcSig | mbcLower);
+								mem[2] = rom.getROM(ROMBank, 0);
+								mem[3] = rom.getROM(ROMBank, 1);
 							}
+							else
+								mbcSig = prev;
 						}
 						else
-							mem[5] = rom.getRAM(val & 0x03);
+						{
+							if ((val & 0x03) < rom.getRAMSize(false))
+							{
+								RAMBank = val & 0x03;
+								mem[5] = rom.getRAM(RAMBank);
+							}
+						}
 					break;
 					
 					case 2: break;
 					
 					case 3:
-						mem[5] = rom.getRAM(val & 0x03);
+						if ((val & 0x03) < rom.getRAMSize(false))
+						{
+							RAMBank = val & 0x03;
+							mem[5] = rom.getRAM(RAMBank);
+						}
 					break;
 					
 					case 5:
@@ -273,14 +302,17 @@ public final class CPU extends Thread
 					case 1:
 						mbcMode = val & 0x01;
 						if (mbcMode == 0)
+						{
+							RAMBank = 0;
 							mem[5] = rom.getRAM(0);
+						}
 						else
+						{
 							mbcSig = 0;
-							if (mbcLower < rom.numROMBanks)
-							{
-								mem[2] = rom.getROM(mbcLower, 0);
-								mem[3] = rom.getROM(mbcLower, 1);
-							}
+							ROMBank = mbcLower;
+							mem[2] = rom.getROM(ROMBank, 0);
+							mem[3] = rom.getROM(ROMBank, 1);
+						}
 					break;
 					
 					case 2: case 3: break;
@@ -826,6 +858,9 @@ public final class CPU extends Thread
 		    			out.write(HREG);
 		    			out.write(LREG);
 		    			out.write((IME?1:0));
+						
+						out.write(ROMBank);
+						out.write(RAMBank);
 		    			/*
 		    			for(int i: background){
 		    				out.write(i);
@@ -876,15 +911,12 @@ public final class CPU extends Thread
 		    			for(int i: HRAM){
 		    				out.write(i);
 		    			}
-		    			
-		    			int ramsize = rom.getRAMSize(false);
-		    			for(int i: mem[5]){
-		    				out.write(i);
-		    			}
 		    			for(int i: mem[6]){
 		    				out.write(i);
 		    			}
-		    			for(int i = 1; i < ramsize; i++){
+						
+						int ramsize = rom.getRAMSize(false);
+		    			for(int i = 0; i < ramsize; i++){
 		    				for(int k: rom.getRAM(i)){
 		    					out.write(k);
 		    				}
@@ -928,6 +960,14 @@ public final class CPU extends Thread
 		    			LREG=buf.read();
 		    			//System.out.printf("%d %d %d %d %d %d %d %d %d\n", PC,SP,AREG,BREG,CREG,DREG,EREG,FREG,HREG,LREG);
 		    			IME = (buf.read()==1);
+						
+						ROMBank = buf.read();
+						RAMBank = buf.read();
+						
+						mem[2] = rom.getROM(ROMBank, 0);
+						mem[3] = rom.getROM(ROMBank, 1);
+						mem[5] = rom.getRAM(RAMBank);
+						
 		    			/*
 		    			for(int i=0; i< background.length; i++){
 		    				background[i]=buf.read();
@@ -978,18 +1018,15 @@ public final class CPU extends Thread
 		    				VRAM[i]=buf.read();
 		    			for(int i=0; i< HRAM.length; i++)
 		    				HRAM[i]=buf.read();
-		    			int ramsize = rom.getRAMSize(false);
-		    			for(int i=0; i< mem[5].length; i++)
-		    				mem[5][i]=buf.read();
 		    			for(int i=0; i< mem[6].length; i++)
 		    				mem[6][i]=buf.read();
-		    			for(int i = 1; i < ramsize; i++){
-		    				int temp[] = new int[0x2000];
+						
+						int ramsize = rom.getRAMSize(false);
+		    			for(int i = 0; i < ramsize; i++){
+		    				int temp[] = rom.getRAM(i);
 		    				for(int j = 0; j < temp.length; j++){
 		    					temp[j]=buf.read();
 		    				}
-		    				int bank[] = rom.getRAM(i);
-		    				bank = temp;
 		    			}
 		    			
 		    			buf.close();
