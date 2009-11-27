@@ -67,9 +67,9 @@ public final class ROM{
 		if(path.toLowerCase().endsWith(".zip"))
 		{
 			File unzipped = new File(unZip(path));
-			
-			path = unzipped.getPath();
+			path = path.substring(0, path.length()-4);
 			load(unzipped);
+			unzipped.delete();
 		}
 		else
 			load(file);
