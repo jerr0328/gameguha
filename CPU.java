@@ -1324,24 +1324,7 @@ public final class CPU extends Thread
 			// Done drawing background
 			
 	 		while (scanline <= 153) // from 144 to 153 is v-blank period
-			{
-				/*if (!visited[PC])
-				{
-					//System.out.println(Integer.toBinaryString(P1));
-			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
-					System.out.printf("Instruction %02X at %04X\n", readMem(mem, PC), PC);
-			   		visited[PC] = true;
-				}*/
-			
-				//if (PC > 0x219)
-				/*{
-				if(readMem(mem, PC)!=0xCB)
-					System.out.format("Operation 0x%02X at 0x%04X\n",readMem(mem, PC),PC);
-				else
-					System.out.format("Operation 0x%02X 0x%02X at 0x%04X\n",readMem(mem, PC),readMem(mem, PC+1),PC);
-				}*/
-				//if (numCycles > 2000) return;
-				
+			{				
 				// HANDLE INTERRUPTS HERE		
 				if (IME)
 				{
@@ -1425,6 +1408,15 @@ public final class CPU extends Thread
 					}
 				}
 				// DONE HANDLING INTERRUPTS
+				
+				/*if (!visited[PC])
+				{
+					//System.out.println(Integer.toBinaryString(P1));
+			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
+					System.out.printf("Instruction %02X at %04X\n", readMem(mem, PC), PC);
+					System.out.println("lcdc bit set: " + ((mem[7][0x1F0F] & BIT1) != 0) + " if flag set: " + ((mem[7][0x1FFF] & BIT1) != 0));
+			   		visited[PC] = true;
+				}*/
 				
 				switch(readMem(mem, PC++))
 				{
@@ -4616,8 +4608,10 @@ public final class CPU extends Thread
 						if (scanline < GUI.screenHeight)
 						{
 							HRAM[0x1F41] &= ~0x03;
-							if ((HRAM[0x1F41] & BIT3) != 0) // H-Blank interrupt
+							/* This H-Blank interrupt is incorrect
+							if ((HRAM[0x1F41] & BIT3) != 0) 
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
+							*/
 							
 							// Handle BG/Window
 							if ((HRAM[0x1F40] & BIT0) != 0)
@@ -5085,6 +5079,7 @@ public final class CPU extends Thread
 						{
 							int div = (((HRAM[0x1F07]-1) & 0x03) + 1) << 1;
 							
+							// This TIMA interrupt must be incorrect (see Tasmania Story)
 							if (HRAM[0x1F05] > (HRAM[0x1F05] = HRAM[0x1F06] + ((numCycles >> div) % (256-HRAM[0x1F06]))))
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT2);
 							//System.out.println(HRAM[0x1F05]);
