@@ -74,27 +74,11 @@ public final class GUI implements KeyListener//, FrameListener
 		render = new ScreenRenderer(sem);
 		
 		toggleFullScreen(fullScreen);
-		
-		//screen = new BufferedImage(screenWidth, screenHeight, BufferedImage.TYPE_INT_RGB);
-		//imgBuffer = ((DataBufferInt)screen.getRaster().getDataBuffer()).getData();
 
 		int frames = 0;
 		long startT = System.nanoTime();
 
 		staticScreen = new int[screenWidth*screenHeight];
-		/*while(true)
-		{
-			frames++;
-			if (frames == 60)
-			{
-				//System.out.println((System.nanoTime()-startT)/1000000000.0 + " seconds");
-				frames = 0;
-				startT = System.nanoTime();
-			}
-			
-			int[] arr = {0};
-			drawFrame(arr);
-		}*/
 		
 		render.start();
 		
@@ -168,7 +152,6 @@ public final class GUI implements KeyListener//, FrameListener
 		}
 		sem.drainPermits();
 		sem.release();
-		//render.requestFrame();
 	}
 	
 	public void setFilter(int filter)
@@ -221,10 +204,6 @@ public final class GUI implements KeyListener//, FrameListener
 	//This will register which keys are being pressed and released.
 	public void keyPressed(KeyEvent key)
 	{
-		//System.out.println(KeyEvent.getKeyText(key.getKeyCode()));
-		
-		
-			
 		if (cpu == null || !cpu.isAlive())
 			return;
 		else if (key.isAltDown() && key.getKeyCode() == KeyEvent.VK_ENTER)
@@ -502,8 +481,7 @@ public final class GUI implements KeyListener//, FrameListener
 					}
 				else
 					System.out.println("No Thread Running");
-				System.exit(0); //messy, probably should pass this a window event
-								//not that I know how... :x
+				System.exit(0);
 			}
 			else
 				System.out.println("Selected FileMenu " + item); 
@@ -640,7 +618,6 @@ public final class GUI implements KeyListener//, FrameListener
 	}
 	
 	private class SoundMenu extends Menu implements ItemListener {
-		//Frame mw;
 		private CheckboxMenuItem channel1;
 		private CheckboxMenuItem channel2;
 		private CheckboxMenuItem channel3;
@@ -648,7 +625,6 @@ public final class GUI implements KeyListener//, FrameListener
 		private CheckboxMenuItem mute;
 		public SoundMenu(){
 			super("Sound");
-			//mw = m;
 			add(mute = new CheckboxMenuItem("Mute"));
 		    mute.addItemListener(this); 
 		    add(channel1 = new CheckboxMenuItem("Channel 1",true)); 
