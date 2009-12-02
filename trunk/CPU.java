@@ -48,9 +48,7 @@ public final class CPU extends Thread
 	
 	private static final int[] dirtyTiles1 = new int[16];
 	private static final int[] dirtyTiles2 = new int[16];
-	
-	//private EventListenerList frameListeners = new EventListenerList();
-	
+
 	public CPU(String fileName, GUI guiPointer)
 	{
 		// Reset static variables
@@ -764,7 +762,6 @@ public final class CPU extends Thread
 		int numCycles = 0;
 		int scanline = 0;
 		int nextHBlank = CYCLES_PER_LINE;
-		//int nextVBlank = CYCLES_PER_LINE*144;
 		int[] myColor = null;
 		final int[] VRAM = mem[4];
 		final int[] HRAM = mem[7];
@@ -804,17 +801,6 @@ public final class CPU extends Thread
 		writeMem(mem, 0xFF4B, 0x00); // WX
 		writeMem(mem, 0xFFFF, 0x00); // IE
 		
-		/*for (int i = 0; i < 16; i++)
-		{
-			dirtyTiles1[i] = 0x0000FFFF;
-			dirtyTiles2[i] = 0x0000FFFF;
-		}*/
-		
-		/*for (int q = 0; q < 256; q++)
-		{
-			System.out.println(q + ": " + Integer.toBinaryString(FLAG_DEC[q]));
-		}*/
-		
 		long startT = System.nanoTime();
 		long prevFrame = System.nanoTime();
 		
@@ -825,7 +811,7 @@ public final class CPU extends Thread
 		    	while (pleaseWait) {
 			    	try {
 			        	wait();
-			        } catch (Exception e) {/*maybe print something here*/}
+			        } catch (Exception e) {e.printStackTrace();}
 			    }
 		    	if(halt){
 		    		return;
@@ -861,30 +847,7 @@ public final class CPU extends Thread
 						
 						out.write(ROMBank);
 						out.write(RAMBank);
-		    			/*
-		    			for(int i: background){
-		    				out.write(i);
-		    			}
-		    			for(int i: screen){
-		    				out.write(i);
-		    			}
-		    			for(int i: prevTiles){
-		    				out.write(i);
-		    			}
-		    			for(boolean i: spritesOff){
-		    				out.write((i?1:0));
-		    			}
-		    			for(int i: bgColor0){
-		    				out.write(i);
-		    			}
-		    			out.write(windowOffset);
-		    			out.write(prevTileMap);
-		    			out.write(prevColors);
-		    			
-		    			ROM.writeInt(out,val);
-		    			ROM.writeInt(out,memval);
-		    			ROM.writeInt(out,index);
-		    			*/
+						
 		    			ROM.writeInt(out,frameCount);
 		    			ROM.writeInt(out,numCycles);
 		    			ROM.writeInt(out,scanline);
@@ -900,11 +863,6 @@ public final class CPU extends Thread
 		    				ROM.writeInt(out,i);
 		    			}
 
-		    			/*
-		    			for(int i: myColor){
-		    				out.write(i);
-		    			}
-		    			*/
 		    			for(int i: VRAM){
 		    				out.write(i);
 		    			}
@@ -945,7 +903,6 @@ public final class CPU extends Thread
 		    		}
 		    		try{
 		    			BufferedInputStream buf = new BufferedInputStream(new FileInputStream(filename));
-		    			//System.out.println(buf.read());
 		    			PC = (buf.read())<<8;
 		    			PC |= buf.read();
 		    			SP = (buf.read())<<8;
@@ -968,46 +925,15 @@ public final class CPU extends Thread
 						mem[3] = rom.getROM(ROMBank, 1);
 						mem[5] = rom.getRAM(RAMBank);
 						
-		    			/*
-		    			for(int i=0; i< background.length; i++){
-		    				background[i]=buf.read();
-		    			}
-		    			for(int i=0; i< screen.length; i++){
-		    				screen[i]=buf.read();
-		    			}
-		    			for(int i=0; i< prevTiles.length; i++){
-		    				prevTiles[i]=buf.read();
-		    			}
-		    			for(int i=0; i< spritesOff.length; i++){
-		    				spritesOff[i]=(buf.read()==1);
-		    			}
-		    			for(int i=0; i< bgColor0.length; i++){
-		    				bgColor0[i]=buf.read();
-		    			}
-		    			
-		    			windowOffset = buf.read();
-		    			prevTileMap = buf.read();
-		    			prevColors = buf.read();
-		    			*/
-		    			// Fix
 		    			windowOffset = 0;
 		    			prevTileMap = -1;
 		    			prevColors = -1;
-		    			/*
-		    			val = ROM.readInt(buf);
-		    			memval = ROM.readInt(buf);
-		    			index = ROM.readInt(buf);*/
+
 		    			frameCount = ROM.readInt(buf);
 		    			numCycles = ROM.readInt(buf);
 		    			scanline = ROM.readInt(buf);
 		    			nextHBlank = ROM.readInt(buf);
 		    			
-
-		    			/*
-		    			for(int i=0; i< myColor.length; i++){
-		    				myColor[i]=buf.read();
-		    			}
-		    			*/
 		    			for(int i=0; i< 4; i++)
 		    				colorBG[i]=ROM.readInt(buf);
 		    			for(int i=0; i< 4; i++)
@@ -1050,8 +976,6 @@ public final class CPU extends Thread
 					prevColors = HRAM[0x1F47];
 					prevTileMap = (HRAM[0x1F40] & BIT4);
 					redraw = true;
-					//for (int i = 0; i < 1024; i++)
-					//	prevTiles[i] = -1;
 				}
 				else
 					redraw = false;
@@ -1069,8 +993,6 @@ public final class CPU extends Thread
 						{
 							if (!redraw && (prevTiles[(upperByte >> 6) | (xPix >> 3)] == tileNum) && ((dirtyTiles1[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0))
 								continue;
-							//if ()
-							//	continue;
 							tileIndex = tileNum << 4; // tileNum * 16
 						}
 						else
@@ -1082,8 +1004,6 @@ public final class CPU extends Thread
 							tileNum = ((byte)(tileNum)) + 128;
 							if (!redraw && (prevTiles[(upperByte >> 6) | (xPix >> 3)] == tileNum) && ((dirtyTiles2[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0))
 								continue;
-							//if ((dirtyTiles2[tileNum >> 4] & (1 << (tileNum & 0x0F))) == 0)
-							//	continue;
 							tileIndex = 0x800 + (tileNum << 4);
 						}
 						
@@ -1411,7 +1331,6 @@ public final class CPU extends Thread
 				
 				/*if (!visited[PC])
 				{
-					//System.out.println(Integer.toBinaryString(P1));
 			   		System.out.printf("A: %02X, B: %02X, C: %02X, D: %02X, E: %02X, F: %02X, H: %02X, L: %02X, SP: %04X\n", AREG, BREG, CREG, DREG, EREG, FREG, HREG, LREG, SP);
 					System.out.printf("Instruction %02X at %04X\n", readMem(mem, PC), PC);
 					System.out.println("lcdc bit set: " + ((mem[7][0x1F0F] & BIT1) != 0) + " if flag set: " + ((mem[7][0x1FFF] & BIT1) != 0));
@@ -1529,7 +1448,6 @@ public final class CPU extends Thread
 					case 0x10: // STOP
 						numCycles++;
 						//PC++? (not all assemblers insert 0x00)
-						// *TODO: give control to key listener*
 					break;
 					
 					case 0x11: //LD DE,nn
@@ -3619,7 +3537,6 @@ public final class CPU extends Thread
 								numCycles+=4;
 								index = (HREG << 8) | LREG; 
 								writeMem(mem, index, readMem(mem, index) & ~BIT0);
-								// may create a method and change to: andMem((HREG << 8) | LREG, ~BIT0);
 							break;
 							
 							case 0x87: // RES 0,A
@@ -3948,7 +3865,6 @@ public final class CPU extends Thread
 								numCycles+=4;
 								index = (HREG << 8) | LREG; 
 								writeMem(mem, index, readMem(mem, index) | BIT0);
-								// may create a method and change to: orMem((HREG << 8) | LREG, BIT0);
 							break;
 							
 							case 0xC7: // SET 0,A
@@ -4860,7 +4776,6 @@ public final class CPU extends Thread
 						else if (scanline == GUI.screenHeight)
 						{
 							// Draw sprites now
-							//int[] oldscreen = screen.clone();
 							Sprite[] sprites = new Sprite[40];
 							
 							if ((HRAM[0x1F40] & BIT2) != 0) // 8*16
@@ -5047,8 +4962,6 @@ public final class CPU extends Thread
 							HRAM[0x1F41] |= BIT0;
 							if ((HRAM[0x1F41] & BIT4) != 0) // LCDC V-Blank
 								HRAM[0x1F0F] |= (HRAM[0x1FFF] & BIT1);
-							
-							//nextVBlank += CYCLES_PER_LINE*154;
 						}
 						
 						if (scanline == HRAM[0x1F45])
@@ -5061,8 +4974,6 @@ public final class CPU extends Thread
 						else
 							HRAM[0x1F41] &= ~BIT2;
 						
-						//System.out.println(PC);
-						
 						HRAM[0x1F44] = ++scanline;
 						nextHBlank += CYCLES_PER_LINE;
 						
@@ -5070,7 +4981,6 @@ public final class CPU extends Thread
 						{
 							numCycles &= 0xFFFFF;
 							nextHBlank &= 0xFFFFF;
-							//nextVBlank &= 0xFFFFF;
 						}
 						
 						HRAM[0x1F04] = (numCycles >> 6) & 0xFF;
@@ -5088,15 +4998,9 @@ public final class CPU extends Thread
 				}
 			}
 			
-			/*Thread.yield();
-			System.gc();
-			Thread.yield();
-			System.gc();*/
-			
 			// Inform GUI class to render Gameboy's VRAM to screen
 			if ((HRAM[0x1F40] & BIT7) != 0)
 			{
-				//sem.release();
 				gui.newFrame(screen);
 			}
 			
@@ -5117,17 +5021,11 @@ public final class CPU extends Thread
 					long waitNano = (prevFrame + nsPerFrame) - System.nanoTime();
 					if (waitNano >= 1000000)
 						Thread.sleep(waitNano / 1000000);
-					//else
-					//	Thread.yield();
 				}
 				catch (InterruptedException e)
 				{
 				}
-				//while ((System.nanoTime() - prevFrame) < (1000000000/59.73))
-					//Thread.yield();
 			}
-			//else
-			//	Thread.yield();
 			
 			prevFrame = System.nanoTime();
 			
@@ -5146,7 +5044,6 @@ public final class CPU extends Thread
 					{
 					}
 				}
-				//System.out.format("total: %d hblank: %d vblank: %d\n", numCycles, nextHBlank, nextVBlank);
 				startT = System.nanoTime();
 			}
 		}

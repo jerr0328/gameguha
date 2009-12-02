@@ -4,7 +4,6 @@ import java.util.concurrent.*;
 
 public final class ScreenRenderer extends Thread
 {
-	//private static long lastUsedMem;
 	private final Semaphore sem;
 	private static int[] imgBuffer;
 	private static int[] gbScreen;
@@ -68,16 +67,6 @@ public final class ScreenRenderer extends Thread
 		
 		for (;;)
 		{
-			/*while (!newFrame)
-			{
-				try 
-				{
-					Thread.sleep(1);
-				}
-				catch (Exception e)
-				{
-				}
-			}*/
 			try
 			{
 				sem.acquire();
@@ -380,7 +369,6 @@ public final class ScreenRenderer extends Thread
 							for (yPixel = 2; yPixel < (2*GUI.screenHeight)-2; yPixel++)
 								for (xPixel = 2; xPixel < (2*GUI.screenWidth)-2; xPixel++)
 								{
-									//buffer[GUI.screenWidth*4*yPixel + xPixel] = temp[GUI.screenWidth*2*yPixel + xPixel];
 									int A = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel-1)];
 									int B = myTemp[(yPixel-1)*(2*GUI.screenWidth) + xPixel];
 									int C = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel+1)];
@@ -445,7 +433,6 @@ public final class ScreenRenderer extends Thread
 							for (yPixel = 2; yPixel < (2*GUI.screenHeight)-2; yPixel++)
 								for (xPixel = 2; xPixel < (2*GUI.screenWidth)-2; xPixel++)
 								{
-									//buffer[GUI.screenWidth*4*yPixel + xPixel] = temp[GUI.screenWidth*2*yPixel + xPixel];
 									int A = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel-1)];
 									int B = myTemp[(yPixel-1)*(2*GUI.screenWidth) + xPixel];
 									int C = myTemp[(yPixel-1)*(2*GUI.screenWidth) + (xPixel+1)];
@@ -474,37 +461,10 @@ public final class ScreenRenderer extends Thread
 				default: throw new AssertionError("Zoom mode not supported");
 			}
 			
-			//((Graphics2D)g).setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			//Insets ins = frame.getInsets();
-			
 			if (fullScreen)
 				g.drawImage(screen, xOffset, yOffset, drawWidth, drawHeight, null);
 			else
 				g.drawImage(screen, ins.left, ins.top, null);
-			
-
-			/*String s = "";
-			for (int i = 0; i < 1000000; i++)
-				s = Integer.toString(i);
-			System.out.println(s);*/
-			//newFrame = false;
 		}
-		
-     /*System.gc();  
-     System.gc();  
-     System.gc();  
-    
-     // measure memory usage & change:  
-     Runtime rt = Runtime.getRuntime();  
-     long totalMem = rt.totalMemory();  
-     long freeMem = rt.freeMemory();  
-     long usedMem = totalMem - freeMem;  
-     long diff = usedMem -lastUsedMem;  
-     lastUsedMem = usedMem;  
-    
-     // report:  
-     System.out.print("Memory used: " + usedMem);  
-     System.out.println("  increased by: " + ((diff >= 0) ? "+" : "") + diff);  
-		//System.out.println("returning");*/
 	}
 }

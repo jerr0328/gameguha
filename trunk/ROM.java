@@ -7,8 +7,6 @@ import java.util.*;
 import java.util.zip.*;
 
 public final class ROM{	
-	//public static final int bankSize = 0x4000;
-	//public static final int ramSize = 0x2000;
 	public static int numROMBanks;
 	private static int numRAMBanks;
 	private static int rom[][];
