@@ -1,0 +1,1 @@
+GameGuha is a Nintendo GameBoy (and time permitting, GameBoy Color) emulator for a project for a Computer Science 2 class at the University of Central Florida. It is open source and written in the Java programming language, thus running on any machine with a JVM installed. Features include sound, save states, pixel scaling algorithms, and high compatibility and speed.
